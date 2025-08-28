@@ -7,7 +7,7 @@ const router = Router();
 
 router.get('/login-dev', (req, res) => {
     const token = jwt.sign(
-        { id: "30875658-8f2d-438a-99eb-c9c8366c5cf9", email: 'aryan.chauhan@pw.live', role: 'admin' },
+        { id: "6518d872-6a53-40b5-8918-3b32522d6551", email: 'aryan.chauhan@pw.live', role: 'ADMIN' },
         config.jwtSecret as string,
         { expiresIn: '1h' }
     );

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { errorResponse,successResponse } from '../utils/response';
 
-type Role = 'admin' | 'member';
+type Role = 'ADMIN' | 'MEMBER';
 
 // 🔑 Authorization: Check if user has required role
 export const authorize = (...allowedRoles: Role[]) => {
