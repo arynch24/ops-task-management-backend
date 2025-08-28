@@ -38,7 +38,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     try {
         const decoded = verifyToken(token);
-        const user = await prisma.users.findUnique({ where: { id: decoded.id } });
+        const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
         if (!user) {
             return errorResponse(res, 404, 'User not found.');

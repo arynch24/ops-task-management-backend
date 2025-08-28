@@ -16,172 +16,205 @@ datasource db {
 
 // Enums
 enum Role {
-  admin
-  member
+  ADMIN
+  MEMBER
 }
 
 enum TaskType {
-  daily
-  adhoc
+  ADHOC
+  RECURRING
 }
 
 enum ParameterType {
-  number
-  text
-  datetime
-  dropdown
+  NUMBER
+  TEXT
+  DATETIME
+  DROPDOWN
+  BOOLEAN
+  COMMENT
 }
 
 enum ScheduleStatus {
-  pending
-  assigned
-  skipped
+  PENDING
+  ASSIGNED
+  SKIPPED
+  CANCELLED
 }
 
 enum AssignmentStatus {
-  pending
-  completed
+  PENDING
+  COMPLETED
 }
 
 enum NotificationType {
-  task_assigned
-  task_reassigned
-  task_completed
+  TASK_ASSIGNED
+  TASK_REASSIGNED
+  TASK_COMPLETED
+  DAILY_DIGEST
 }
 
 // Models
-model Users {
-  id        String   @id @default(uuid())
-  email     String   @unique @db.VarChar(255)
-  firstName String   @db.VarChar(100)
-  lastName  String   @db.VarChar(100)
-  role      Role     @default(member)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+model User {
+  id            String             @id @default(uuid())
+  email         String             @unique @db.VarChar(255)
+  firstName     String             @db.VarChar(100)
+  lastName      String             @db.VarChar(100)
+  role          Role               @default(MEMBER)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   // Relations
-  createdCategories    Categories[]      @relation("CreatedCategories")
-  createdSubcategories Subcategories[]   @relation("CreatedSubcategories")
-  createdTasks         Tasks[]           @relation("CreatedTasks")
-  assignedTasks        TaskAssignments[] @relation("AssignedTasks")
-  assignedByTasks      TaskAssignments[] @relation("AssignedByTasks")
-  notifications        Notifications[]
+  createdCategories    Category[]         @relation("CategoryCreator")
+  createdSubcategories Subcategory[]      @relation("SubcategoryCreator")
+  createdTasks         Task[]             @relation("TaskCreator")
+  assignedTasks        TaskAssignment[]   @relation("TaskAssignee")
+  assignedByTasks      TaskAssignment[]   @relation("TaskAssigner")
+  notifications        Notification[]
 
   @@map("users")
 }
 
-model Categories {
-  id          String   @id @default(uuid())
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  createdBy   String   @db.VarChar(255)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Category {
+  id          String             @id @default(uuid())
+  name        String             @db.VarChar(255)
+  description String?            @db.Text
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   String             @db.VarChar(255)
+  createdByUser User             @relation("CategoryCreator", fields: [createdBy], references: [id])
 
-  // Relations
-  createdByUser Users           @relation("CreatedCategories", fields: [createdBy], references: [id])
-  subcategories Subcategories[]
-  tasks         Tasks[]
+  subcategories Subcategory[]
+  tasks         Task[]
 
   @@map("categories")
 }
 
-model Subcategories {
-  id          String   @id @default(uuid())
-  categoryId  String   @db.VarChar(255)
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  createdBy   String   @db.VarChar(255)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Subcategory {
+  id          String             @id @default(uuid())
+  name        String             @db.VarChar(255)
+  description String?            @db.Text
+  categoryId  String             @db.VarChar(255)
+  category    Category           @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   String             @db.VarChar(255)
+  createdByUser User             @relation("SubcategoryCreator", fields: [createdBy], references: [id])
 
-  // Relations
-  category      Categories @relation(fields: [categoryId], references: [id])
-  createdByUser Users      @relation("CreatedSubcategories", fields: [createdBy], references: [id])
-  tasks         Tasks[]
+  tasks Task[]
 
   @@map("subcategories")
 }
 
-model Tasks {
-  id               String        @id @default(uuid())
-  title            String        @db.VarChar(255)
-  description      String?       @db.Text
-  categoryId       String?       @db.VarChar(255)
-  subcategoryId    String?       @db.VarChar(255)
-  createdBy        String        @db.VarChar(255)
-  taskType         TaskType
-  parameterType    ParameterType
-  parameterLabel   String        @db.VarChar(255)
-  parameterUnit    String?       @db.VarChar(50)
-  dropdownOptions  Json? // For dropdown values (e.g., ["Option A", "Option B"])
-  repetitionConfig Json? // Stores frequency, days, etc.
-  nextDueDate      DateTime?
-  lastGenerated    DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+/// Represents a template for a task (either one-time or recurring)
+model Task {
+  id                  String               @id @default(uuid())
+  title               String               @db.VarChar(255)
+  description         String?              @db.Text
+  categoryId          String?              @db.VarChar(255)
+  subcategoryId       String?              @db.VarChar(255)
+  category            Category?            @relation(fields: [categoryId], references: [id])
+  subcategory         Subcategory?         @relation(fields: [subcategoryId], references: [id])
+  createdBy           String               @db.VarChar(255)
+  createdByUser       User                 @relation("TaskCreator", fields: [createdBy], references: [id])
+  taskType            TaskType
+  parameterType       ParameterType
+  parameterLabel      String               @db.VarChar(255) // e.g., "Battery Voltage"
+  parameterUnit       String?              @db.VarChar(50)  // e.g., "Volts", "°C", "psi"
+  parameterIsRequired Boolean              @default(true)
+  dropdownOptions     String[]             // Only for DROPDOWN type, e.g., ["High", "Medium", "Low"]
+  repetitionConfig    Json?                // Rule-based config for recurring tasks
+  /*
+    Example:
+    {
+      type: "interval",
+      days: 3,
+      atTime: "09:00",
+      timezone: "Asia/Kolkata",
+      endsAfterMonths: 6
+    }
+    OR
+    {
+      type: "weekly",
+      onDays: ["MON", "WED", "FRI"],
+      atTime: "10:30",
+      timezone: "UTC"
+    }
+    OR
+    {
+      type: "monthly",
+      onDate: 15,
+      atTime: "08:00"
+    }
+  */
+  timezone            String?              @default("UTC") // Task execution timezone
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   // Relations
-  category           Categories?              @relation(fields: [categoryId], references: [id])
-  subcategory        Subcategories?           @relation(fields: [subcategoryId], references: [id])
-  createdByUser      Users                    @relation("CreatedTasks", fields: [createdBy], references: [id])
-  recurringSchedules RecurringTaskSchedules[]
-  taskAssignments    TaskAssignments[]
+  recurringSchedules RecurringTaskSchedule[]
+  taskAssignments    TaskAssignment[]
 
   @@map("tasks")
 }
 
-model RecurringTaskSchedules {
-  id            String         @id @default(uuid())
-  taskId        String         @db.VarChar(255)
-  scheduledDate DateTime
-  status        ScheduleStatus @default(pending)
-  assignmentId  String?        @unique
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+/// One row per scheduled instance of a recurring task
+model RecurringTaskSchedule {
+  id            String             @id @default(uuid())
+  taskId        String             @db.VarChar(255)
+  task          Task               @relation(fields: [taskId], references: [id])
+  scheduledDate DateTime           // Date/time in UTC
+  status        ScheduleStatus     @default(PENDING)
+  assignmentId  String?            @unique // Points to one assignment if assigned
+  assignment    TaskAssignment?    @relation(fields: [assignmentId], references: [id])
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
-  // Relations
-  task       Tasks            @relation(fields: [taskId], references: [id])
-  assignment TaskAssignments? @relation(fields: [assignmentId], references: [id])
-
-  @@map("recurringTaskSchedules")
+  @@index([taskId, scheduledDate])
+  @@index([scheduledDate, status])
+  @@map("recurring_task_schedules")
 }
 
-model TaskAssignments {
-  id             String           @id @default(uuid())
-  taskId         String           @db.VarChar(255)
-  assignedTo     String           @db.VarChar(255)
-  assignedBy     String           @db.VarChar(255)
-  status         AssignmentStatus @default(pending)
-  parameterValue String?          @db.Text
-  comment        String?          @db.Text
-  completedAt    DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+/// One assignment per user per scheduled task (or ad-hoc)
+model TaskAssignment {
+  id               String               @id @default(uuid())
+  taskId           String               @db.VarChar(255)
+  task             Task                 @relation(fields: [taskId], references: [id])
+  scheduleId       String?              @unique // Optional: only for recurring tasks
+  schedule         RecurringTaskSchedule?
+  assignedTo       String               @db.VarChar(255)
+  assignedToUser   User                 @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  assignedBy       String               @db.VarChar(255)
+  assignedByUser   User                 @relation("TaskAssigner", fields: [assignedBy], references: [id])
+  status           AssignmentStatus     @default(PENDING)
+  parameterValue   String?              @db.Text // Store submitted value as string (parse based on type)
+  comment          String?              @db.Text
+  completedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  // Relations
-  task           Tasks                   @relation(fields: [taskId], references: [id])
-  assignedToUser Users                   @relation("AssignedTasks", fields: [assignedTo], references: [id])
-  assignedByUser Users                   @relation("AssignedByTasks", fields: [assignedBy], references: [id])
-  schedule       RecurringTaskSchedules?
-  notifications  Notifications[]
+  notifications Notification[]
 
-  @@map("taskAssignments")
+  @@index([assignedTo, status])
+  @@index([taskId, scheduleId])
+  @@map("task_assignments")
 }
 
-model Notifications {
-  id               String           @id @default(uuid())
-  userId           String           @db.VarChar(255)
-  taskAssignmentId String?          @db.VarChar(255)
+/// Notifications (email logs + read status)
+model Notification {
+  id               String             @id @default(uuid())
+  userId           String             @db.VarChar(255)
+  user             User               @relation(fields: [userId], references: [id])
+  taskAssignmentId String?            @db.VarChar(255)
+  taskAssignment   TaskAssignment?    @relation(fields: [taskAssignmentId], references: [id])
   type             NotificationType
-  message          String           @db.Text
-  isRead           Boolean          @default(false)
-  emailSent        Boolean          @default(false)
-  createdAt        DateTime         @default(now())
+  message          String             @db.Text
+  isRead           Boolean            @default(false)
+  emailSent        Boolean            @default(false)
+  emailError       String?            // If email failed
+  createdAt        DateTime           @default(now())
 
-  // Relations
-  user           Users            @relation(fields: [userId], references: [id], map: "notifications_user_fkey")
-  taskAssignment TaskAssignments? @relation(fields: [taskAssignmentId], references: [id], map: "notifications_task_assignment_fkey")
-
+  @@index([userId, isRead])
+  @@index([type, createdAt])
   @@map("notifications")
 }
