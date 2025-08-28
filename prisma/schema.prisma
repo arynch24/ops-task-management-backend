@@ -6,10 +6,182 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  // output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  admin
+  member
+}
+
+enum TaskType {
+  daily
+  adhoc
+}
+
+enum ParameterType {
+  number
+  text
+  datetime
+  dropdown
+}
+
+enum ScheduleStatus {
+  pending
+  assigned
+  skipped
+}
+
+enum AssignmentStatus {
+  pending
+  completed
+}
+
+enum NotificationType {
+  task_assigned
+  task_reassigned
+  task_completed
+}
+
+// Models
+model Users {
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  firstName String   @db.VarChar(100)
+  lastName  String   @db.VarChar(100)
+  role      Role     @default(member)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdCategories    Categories[]      @relation("CreatedCategories")
+  createdSubcategories Subcategories[]   @relation("CreatedSubcategories")
+  createdTasks         Tasks[]           @relation("CreatedTasks")
+  assignedTasks        TaskAssignments[] @relation("AssignedTasks")
+  assignedByTasks      TaskAssignments[] @relation("AssignedByTasks")
+  notifications        Notifications[]
+
+  @@map("users")
+}
+
+model Categories {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdBy   String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdByUser Users           @relation("CreatedCategories", fields: [createdBy], references: [id])
+  subcategories Subcategories[]
+  tasks         Tasks[]
+
+  @@map("categories")
+}
+
+model Subcategories {
+  id          String   @id @default(uuid())
+  categoryId  String   @db.VarChar(255)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdBy   String   @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  category      Categories @relation(fields: [categoryId], references: [id])
+  createdByUser Users      @relation("CreatedSubcategories", fields: [createdBy], references: [id])
+  tasks         Tasks[]
+
+  @@map("subcategories")
+}
+
+model Tasks {
+  id               String        @id @default(uuid())
+  title            String        @db.VarChar(255)
+  description      String?       @db.Text
+  categoryId       String?       @db.VarChar(255)
+  subcategoryId    String?       @db.VarChar(255)
+  createdBy        String        @db.VarChar(255)
+  taskType         TaskType
+  parameterType    ParameterType
+  parameterLabel   String        @db.VarChar(255)
+  parameterUnit    String?       @db.VarChar(50)
+  dropdownOptions  Json? // For dropdown values (e.g., ["Option A", "Option B"])
+  repetitionConfig Json? // Stores frequency, days, etc.
+  nextDueDate      DateTime?
+  lastGenerated    DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  category           Categories?              @relation(fields: [categoryId], references: [id])
+  subcategory        Subcategories?           @relation(fields: [subcategoryId], references: [id])
+  createdByUser      Users                    @relation("CreatedTasks", fields: [createdBy], references: [id])
+  recurringSchedules RecurringTaskSchedules[]
+  taskAssignments    TaskAssignments[]
+
+  @@map("tasks")
+}
+
+model RecurringTaskSchedules {
+  id            String         @id @default(uuid())
+  taskId        String         @db.VarChar(255)
+  scheduledDate DateTime
+  status        ScheduleStatus @default(pending)
+  assignmentId  String?        @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  task       Tasks            @relation(fields: [taskId], references: [id])
+  assignment TaskAssignments? @relation(fields: [assignmentId], references: [id])
+
+  @@map("recurringTaskSchedules")
+}
+
+model TaskAssignments {
+  id             String           @id @default(uuid())
+  taskId         String           @db.VarChar(255)
+  assignedTo     String           @db.VarChar(255)
+  assignedBy     String           @db.VarChar(255)
+  status         AssignmentStatus @default(pending)
+  parameterValue String?          @db.Text
+  comment        String?          @db.Text
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  task           Tasks                   @relation(fields: [taskId], references: [id])
+  assignedToUser Users                   @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  assignedByUser Users                   @relation("AssignedByTasks", fields: [assignedBy], references: [id])
+  schedule       RecurringTaskSchedules?
+  notifications  Notifications[]
+
+  @@map("taskAssignments")
+}
+
+model Notifications {
+  id               String           @id @default(uuid())
+  userId           String           @db.VarChar(255)
+  taskAssignmentId String?          @db.VarChar(255)
+  type             NotificationType
+  message          String           @db.Text
+  isRead           Boolean          @default(false)
+  emailSent        Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+
+  // Relations
+  user           Users            @relation(fields: [userId], references: [id], map: "notifications_user_fkey")
+  taskAssignment TaskAssignments? @relation(fields: [taskAssignmentId], references: [id], map: "notifications_task_assignment_fkey")
+
+  @@map("notifications")
 }
