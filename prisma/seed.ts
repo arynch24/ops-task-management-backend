@@ -2,19 +2,19 @@
 import { prisma } from '../src/config/db';
 
 async function main() {
-  await prisma.users.createMany({
+  await prisma.user.createMany({
     data: [
       {
         email: 'aryan.chauhan@pw.live',
         firstName: 'Admin',
         lastName: 'User',
-        role: 'admin',
+        role: 'ADMIN',
       },
       {
         email: 'aryan.sot010025@pwioi.com',
         firstName: 'Member',
         lastName: 'User',
-        role: 'member',
+        role: 'MEMBER',
       },
     ],
   });
