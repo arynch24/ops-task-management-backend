@@ -108,11 +108,11 @@ model Subcategory {
 
 /// Represents a template for a task (either one-time or recurring)
 model Task {
-  id                  String        @id @default(uuid())
-  title               String        @db.VarChar(255)
-  description         String?       @db.Text
-  categoryId          String?       @db.VarChar(255)
-  subcategoryId       String?       @db.VarChar(255)
+  id            String  @id @default(uuid())
+  title         String  @db.VarChar(255)
+  description   String? @db.Text
+  categoryId    String? @db.VarChar(255)
+  subcategoryId String? @db.VarChar(255)
 
   /// Required for recurring tasks (enforced in application layer)
   category            Category?     @relation(fields: [categoryId], references: [id])
@@ -159,8 +159,9 @@ model Task {
   updatedAt DateTime @updatedAt
 
   // Relations
-  recurringSchedules RecurringTaskSchedule[]
-  taskAssignments    TaskAssignment[]
+  recurringSchedules  RecurringTaskSchedule[]
+  taskAssignments     TaskAssignment[]
+  TaskAssignmentGroup TaskAssignmentGroup?
 
   @@map("tasks")
 }
@@ -205,6 +206,18 @@ model TaskAssignment {
   @@index([assignedTo, status])
   @@index([taskId, scheduleId])
   @@map("task_assignments")
+}
+
+model TaskAssignmentGroup {
+  id            String   @id @default(uuid())
+  taskId        String   @unique
+  task          Task     @relation(fields: [taskId], references: [id])
+  assignedToIds String[] // Array of user IDs
+  assignedBy    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("task_assignment_groups")
 }
 
 /// Notifications (email logs + read status)

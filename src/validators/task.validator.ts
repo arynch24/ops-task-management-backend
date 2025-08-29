@@ -8,7 +8,7 @@ export const repetitionConfigSchema = z.object({
   type: z.enum(['interval', 'weekly', 'monthly']),
   atTime: z.string().regex(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/, 'Invalid time format HH:mm'),
   // Removed: timezone
-  endsAfterMonths: z.number().int().min(1).max(12).default(6),
+  // endsAfterMonths: z.number().int().min(1).max(12).default(6),
 }).and(
   z.discriminatedUnion('type', [
     z.object({

@@ -5,15 +5,15 @@ async function main() {
   await prisma.user.createMany({
     data: [
       {
-        email: 'aryan.chauhan@pw.live',
-        firstName: 'Admin',
-        lastName: 'User',
+        email: 'ankit.raj4@pw.live',
+        firstName: 'Ankit',
+        lastName: 'Admin',
         role: 'ADMIN',
       },
       {
-        email: 'aryan.sot010025@pwioi.com',
-        firstName: 'Member',
-        lastName: 'User',
+        email: 'ankit.sot010020@pwioi.com',
+        firstName: 'Ankit',
+        lastName: 'Member',
         role: 'MEMBER',
       },
     ],
