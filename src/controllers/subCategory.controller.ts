@@ -6,12 +6,7 @@ import { errorResponse, successResponse } from '../utils/response';
 
 export const createSubcategory = async (req: Request, res: Response) => {
   try {
-    const parsed = createSubcategorySchema.safeParse(req.body);
-    if (!parsed.success) {
-      return errorResponse(res, 400, 'Validation failed');
-    }
-
-    const { categoryId, name, description } = parsed.data;
+    const { categoryId, name, description } = req.body;
     const createdBy = req.user.id;
 
     // Verify category exists
@@ -69,15 +64,8 @@ export const getSubcategoryById = async (req: Request, res: Response) => {
 export const updateSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const parsed = updateSubcategorySchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: parsed.error,
-      });
-    }
 
-    const data = parsed.data;
+    const data = req.body;
 
     if (!id || !data) {
       return errorResponse(res, 400, 'Subcategory ID and data are required');

@@ -5,12 +5,8 @@ import { successResponse, errorResponse } from '../utils/response';
 
 export const createCategory = async (req: Request, res: Response) => {
     try {
-        const parsed = createCategorySchema.safeParse(req.body);
-        if (!parsed.success) {
-            return errorResponse(res, 400, 'Validation failed');
-        }
 
-        const { name, description } = parsed.data;
+        const { name, description } = req.body;
         const createdBy = req.user.id;
 
         const category = await CategoryService.createCategory(name, description, createdBy);
@@ -58,15 +54,10 @@ export const updateCategory = async (req: Request, res: Response) => {
             return errorResponse(res, 400, 'Invalid category ID');
         }
 
-        const parsed = updateCategorySchema.safeParse(req.body);
-        if (!parsed.success) {
-            return errorResponse(res, 400, 'Validation failed');
-        }
-
-        const data = parsed.data;
+        const data = req.body;
 
         const updateData: { name?: string; description?: string | null } = {};
-        
+
         if (data.name !== undefined) updateData.name = data.name;
         if (data.description !== undefined) updateData.description = data.description;
 
