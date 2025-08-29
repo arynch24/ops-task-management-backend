@@ -7,13 +7,19 @@ import { assignTaskSchema, completeAssignmentSchema } from '../validators/assign
 
 const router = Router();
 
-// Admin assigns task to members
+/** Admin assigns task to members 
+ * @returns {Assignment} - The created assignment
+ */
 router.post('/', authenticate, authorize('ADMIN'), validate(assignTaskSchema), assignTask);
 
-// Member completes assigned task
+/** Member marks assignment as complete
+ * @returns {Assignment} - The updated assignment
+ */
 router.patch('/:id/complete', authenticate, validate(completeAssignmentSchema), completeAssignment);
 
-// Member views their assignments
+/** Member views their assignments
+ * @returns {Assignment[]} - The list of assignments
+ */
 router.get('/', authenticate, getMyAssignments);
 
 export default router;

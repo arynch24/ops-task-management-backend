@@ -5,10 +5,16 @@ import { authorize } from '../middlewares/authorize.middleware';
 
 const router = Router();
 
-//for both admin and member
+/** Get current user 
+ * @returns {User} - The current user
+*/
 router.get('/me', authenticate, getMe);
 
-//for admin only
+/** Get all members
+ * @returns {User[]} - The list of all members
+ * @throws {UnauthorizedError} - If user is not authenticated
+ * @throws {ForbiddenError} - If user is not an admin
+*/
 router.get('/members', authenticate, authorize('ADMIN'), getAllMembers);
 
 export default router;
