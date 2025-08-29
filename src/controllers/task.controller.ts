@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { createTaskSchema } from '../validators/task.validator';
 import { TaskService } from '../services/task.service';
 import { successResponse, errorResponse } from '../utils/response';
+import { AssignmentService } from '../services/assignment.service';
 
 export const createTask = async (req: Request, res: Response) => {
     try {
@@ -98,4 +99,30 @@ export const deleteTask = async (req: Request, res: Response) => {
         }
         return errorResponse(res, 500, 'Failed to delete task');
     }
+};
+
+export const reassignTask = async (req: Request, res: Response) => {
+  try {
+
+    const { id } = req.params;
+
+    if (!id) {
+      return errorResponse(res, 400, 'Invalid task ID');
+    }
+
+    const { userIds } = req.body;
+    const assignedBy = req.user.id;
+
+    const result = await AssignmentService.reassignTask(id, userIds, assignedBy);
+
+    return successResponse(res, 'Task reassigned for future instances', result);
+  } catch (error: any) {
+    if (error.message === 'Task not found') {
+      return errorResponse(res, 404, error.message);
+    }
+    if (error.message === 'Only recurring tasks can be reassigned') {
+      return errorResponse(res, 400, error.message);
+    }
+    return errorResponse(res, 500, 'Failed to reassign task');
+  }
 };

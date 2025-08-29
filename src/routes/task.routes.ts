@@ -5,11 +5,13 @@ import {
     getAllTasks,
     updateTask,
     deleteTask,
+    reassignTask
 } from '../controllers/task.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorize } from '../middlewares/authorize.middleware';
 import { validate } from '../middlewares/validator.middleware';
 import { createTaskSchema } from '../validators/task.validator';
+import { reassignTaskSchema } from '../validators/assignment.validator';
 
 const router = Router();
 
@@ -21,5 +23,8 @@ router.delete('/:id', authenticate, authorize('ADMIN'), deleteTask);
 // Task management routes for all users
 router.get('/', authenticate, getAllTasks);
 router.get('/:id', authenticate, getTask);
+
+// Reassign task to new users (future schedules only)
+router.put('/:id/assign', authenticate, authorize('ADMIN'), validate(reassignTaskSchema), reassignTask);
 
 export default router;

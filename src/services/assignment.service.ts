@@ -210,4 +210,36 @@ export class AssignmentService {
       return { success: true, count: createdAssignments.length };
     });
   }
+
+  /**
+ * Reassign a recurring task to new users (future schedules only)
+ */
+  static async reassignTask(taskId: string, userIds: string[], assignedBy: string) {
+    return prisma.$transaction(async (tx) => {
+      const task = await tx.task.findUnique({
+        where: { id: taskId },
+      });
+
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      if (task.taskType !== 'RECURRING') {
+        throw new Error('Only recurring tasks can be reassigned');
+      }
+
+      // Update or create TaskAssignmentGroup
+      await tx.taskAssignmentGroup.upsert({
+        where: { taskId },
+        create: {
+          taskId,
+          assignedToIds: userIds,
+          assignedBy,
+        },
+        update: { assignedToIds: userIds, assignedBy },
+      });
+
+      return { success: true, taskId, reassignedTo: userIds };
+    });
+  }
 }

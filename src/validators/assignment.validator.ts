@@ -11,3 +11,7 @@ export const completeAssignmentSchema = z.object({
   parameterValue: z.string().min(1, 'Parameter value is required').max(2000),
   comment: z.string().max(500).optional().nullable(),
 });
+
+export const reassignTaskSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1, 'At least one user must be assigned'),
+});
