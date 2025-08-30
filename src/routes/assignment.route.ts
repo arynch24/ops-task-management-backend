@@ -7,12 +7,26 @@ import { assignTaskSchema, completeAssignmentSchema } from '../validators/assign
 
 const router = Router();
 
-/** Admin assigns task to members 
+/** API Prefix: /api/assignments */
+
+/** Admin assigns task to members
+ * POST /api/assignments
+ * @description Assign a task to a member
+ * @body :{
+ *   "userId": "string",
+ *   "taskIds": "string[]"
+ * }
  * @returns {Assignment} - The created assignment
  */
 router.post('/', authenticate, authorize('ADMIN'), validate(assignTaskSchema), assignTask);
 
 /** Member marks assignment as complete
+ * PATCH /api/assignments/:id/complete
+ * @description Mark an assignment as complete
+ * @body :{
+ *   "parameterValue": "string",
+ *   "comment"(optional): "string"
+ * }
  * @returns {Assignment} - The updated assignment
  */
 router.patch('/:id/complete', authenticate, validate(completeAssignmentSchema), completeAssignment);

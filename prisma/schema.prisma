@@ -132,15 +132,12 @@ model Task {
    * type: "interval",
    * days: 3,
    * atTime: "09:00",
-   * timezone: "Asia/Kolkata",
-   * endsAfterMonths: 6
    * }
    * OR
    * {
    * type: "weekly",
    * onDays: ["MON", "WED", "FRI"],
    * atTime: "10:30",
-   * timezone: "UTC"
    * }
    * OR
    * {

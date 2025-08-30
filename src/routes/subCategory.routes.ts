@@ -14,37 +14,41 @@ import { createSubcategorySchema, updateSubcategorySchema } from '../validators/
 const router = Router();
 
 /** Create a new subcategory
+ * POST /api/subcategories
+ * @description Create a new subcategory
+ * @body :{
+ *   "name": "string",
+ *   "description"(optional): "string",
+ *   "categoryId": "string"
+ * }
  * @returns {Subcategory} - The created subcategory
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {ValidationError} - If request body is invalid
  */
 router.post('/', authenticate, authorize('ADMIN'), validate(createSubcategorySchema), createSubcategory);
 
 /** Update an existing subcategory
+ * PATCH /api/subcategories/:id
+ * @description Update an existing subcategory
+ * @body :{
+ *   "name": "string",
+ *   "description": "string",
+ *   "categoryId": "string"
+ * }
  * @returns {Subcategory} - The updated subcategory
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If subcategory is not found
- * @throws {ValidationError} - If request body is invalid
  */
 router.patch('/:id', authenticate, authorize('ADMIN'), validate(updateSubcategorySchema), updateSubcategory);
 
 /** Delete an existing subcategory
  * @returns {void}
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If subcategory is not found
  */
 router.delete('/:id', authenticate, authorize('ADMIN'), deleteSubcategory);
 
 /** Get all subcategories
  * @returns {Subcategory[]} - The list of subcategories
- * @throws {UnauthorizedError} - If user is not authenticated
  */
 router.get('/', authenticate, getAllSubcategories);
 
 /** Get a subcategory by ID
  * @returns {Subcategory} - The subcategory
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If subcategory is not found
  */
 router.get('/:id', authenticate, getSubcategoryById);
 

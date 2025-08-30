@@ -14,37 +14,39 @@ import { createCategorySchema, updateCategorySchema } from '../validators/catego
 const router = Router();
 
 /** Create a new category
+ * POST /api/categories
+ * @description Create a new category
+ * @body :{
+ *   "name": "string",
+ *   "description"(optional): "string"
+ * }
  * @returns {Category} - The created category
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {ValidationError} - If request body is invalid
  */
 router.post('/', authenticate, authorize('ADMIN'), validate(createCategorySchema), createCategory);
 
 /** Update an existing category
+ * PATCH /api/categories/:id
+ * @description Update an existing category
+ * @body :{
+ *   "name": "string",
+ *   "description": "string"
+ * }
  * @returns {Category} - The updated category
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If category is not found
- * @throws {ValidationError} - If request body is invalid
  */
 router.patch('/:id', authenticate, authorize('ADMIN'), validate(updateCategorySchema), updateCategory);
 
 /** Delete an existing category
  * @returns {void}
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If category is not found
  */
 router.delete('/:id', authenticate, authorize('ADMIN'), deleteCategory);
 
 /** Get all categories
  * @returns {Category[]} - The list of categories
- * @throws {UnauthorizedError} - If user is not authenticated
  */
 router.get('/', authenticate, getAllCategories);
 
 /** Get a category by ID
  * @returns {Category} - The category
- * @throws {UnauthorizedError} - If user is not authenticated
- * @throws {NotFoundError} - If category is not found
  */
 router.get('/:id', authenticate, getCategoryById);
 
