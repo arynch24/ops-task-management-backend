@@ -45,24 +45,67 @@ export class TaskService {
   static async getUserTasks(userId: string, limit: number = 10, page: number = 1) {
     const skip = (page - 1) * limit;
 
-    return prisma.task.findMany({
+    const tasks = await prisma.task.findMany({
       where: {
         OR: [
           { createdBy: userId },
           { taskAssignments: { some: { assignedTo: userId } } },
         ],
       },
-      include: {
-        category: true,
-        subcategory: true,
-        createdByUser: { select: { firstName: true, lastName: true } },
-        recurringSchedules: { take: 1, orderBy: { scheduledDate: 'asc' } },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        taskType: true,
+        nextDueDate: true,
+        createdAt: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        taskAssignments: {
+          select: {
+            assignedToUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+          where: {
+            status: 'PENDING',
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip,
     });
+
+    // Flatten and remove taskAssignments
+    return tasks.map(task => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      taskType: task.taskType,
+      nextDueDate: task.nextDueDate,
+      createdAt: task.createdAt,
+      category: task.category,
+      createdByUser: task.createdByUser,
+      assignedTo: task.taskAssignments.map(a => a.assignedToUser),
+    }));
   }
+
 
   static async updateTask(id: string, data: Prisma.TaskUpdateInput) {
     // 1. Get the existing task
