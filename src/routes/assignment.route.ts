@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { assignTask, completeAssignment, getMyAssignments } from '../controllers/assignment.controller';
+import { assignTask, completeAssignment, getMyAssignments, getAllTasksWithDetails } from '../controllers/assignment.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorize } from '../middlewares/authorize.middleware';
 import { validate } from '../middlewares/validator.middleware';
@@ -36,5 +36,7 @@ router.patch('/:id/complete', authenticate, validate(completeAssignmentSchema), 
  * @returns {Assignment[]} - The list of assignments
  */
 router.get('/', authenticate, getMyAssignments);
+
+router.get('/tasks', authenticate, authorize('ADMIN'), getAllTasksWithDetails);
 
 export default router;

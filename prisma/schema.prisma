@@ -172,7 +172,7 @@ model RecurringTaskSchedule {
   scheduledDate DateTime // Date/time in UTC
   status        ScheduleStatus  @default(PENDING)
   assignmentId  String?         @unique // Points to one assignment if assigned
-  assignment    TaskAssignment? @relation(fields: [assignmentId], references: [id])
+  assignment    TaskAssignment?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -187,7 +187,7 @@ model TaskAssignment {
   taskId         String                 @db.VarChar(255)
   task           Task                   @relation(fields: [taskId], references: [id])
   scheduleId     String?                @unique // Optional: only for recurring tasks
-  schedule       RecurringTaskSchedule?
+  schedule       RecurringTaskSchedule? @relation(fields: [scheduleId], references: [id])
   assignedTo     String                 @db.VarChar(255)
   assignedToUser User                   @relation("TaskAssignee", fields: [assignedTo], references: [id])
   assignedBy     String                 @db.VarChar(255)
@@ -204,6 +204,9 @@ model TaskAssignment {
   @@index([assignedTo, status])
   @@index([taskId, scheduleId])
   @@map("task_assignments")
+
+   // 🔐 Prevent duplicate assignments
+  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
 }
 
 model TaskAssignmentGroup {
