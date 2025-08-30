@@ -27,6 +27,20 @@ export class AssignmentService {
       let data: any[];
 
       if (task.taskType === 'ADHOC') {
+
+        const existingAssignments = await tx.taskAssignment.findMany({
+          where: {
+            taskId,
+            assignedTo: { in: userIds },
+            status: AssignmentStatus.PENDING,
+          },
+        });
+
+        if (existingAssignments.length > 0) {
+          const existingUserIds = existingAssignments.map(a => a.assignedTo);
+          throw new Error(`Task already assigned to users: ${existingUserIds.join(', ')}`);
+        }
+
         data = userIds.map(userId => ({
           taskId,
           assignedTo: userId,
