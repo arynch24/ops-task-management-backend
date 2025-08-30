@@ -28,10 +28,6 @@ export class TaskService {
         category: true,
         subcategory: true,
         createdByUser: { select: { firstName: true, lastName: true } },
-        recurringSchedules: {
-          orderBy: { scheduledDate: 'asc' },
-          take: 10,
-        },
         taskAssignments: {
           include: {
             assignedToUser: { select: { firstName: true, lastName: true, email: true } },
@@ -42,37 +38,85 @@ export class TaskService {
     });
   }
 
-  static async getUserTasks(userId: string, limit: number = 10, page: number = 1) {
-    const skip = (page - 1) * limit;
+  /**
+   * Get tasks with optional assignment details — task-first approach
+   */
+  static async getUserTasks(
+    userId: string,
+    filters?: {
+      taskType?: 'ADHOC' | 'RECURRING';
+      fromDate?: Date;
+      toDate?: Date;
+    }
+  ) {
+
+    const { taskType, fromDate, toDate } = filters || {};
+    const startDate = fromDate || new Date();
+    const endDate = toDate || new Date();
+
+    // Normalize to UTC start/end of day
+    const startOfDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+    const endOfDay = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate() + 1));
+
+    // Build where clause for Task
+    const taskWhere: Prisma.TaskWhereInput = {
+      OR: [
+        { createdBy: userId },
+      ],
+      ...(taskType && { taskType }),
+    };
 
     const tasks = await prisma.task.findMany({
-      where: {
-        OR: [
-          { createdBy: userId },
-          { taskAssignments: { some: { assignedTo: userId } } },
-        ],
-      },
+      where: taskWhere,
       select: {
         id: true,
         title: true,
         description: true,
         taskType: true,
+        parameterLabel: true,
+        parameterUnit: true,
+        dueDate: true, // for ADHOC
         nextDueDate: true,
-        createdAt: true,
         category: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { name: true }
+        },
+        subcategory: {
+          select: { name: true }
         },
         createdByUser: {
-          select: {
-            firstName: true,
-            lastName: true,
-          },
+          select: { firstName: true, lastName: true }
         },
+        // ✅ Get assignments for this user only
         taskAssignments: {
+          where: {
+            assignedBy: userId,
+            OR: [
+              // Recurring: filter by schedule date
+              {
+                schedule: {
+                  scheduledDate: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                  },
+                },
+              },
+              // Ad-hoc: filter by createdAt
+              {
+                task: {
+                  dueDate: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                  },
+                }
+              },
+            ],
+          },
           select: {
+            id: true,
+            status: true,
+            parameterValue: true,
+            comment: true,
+            completedAt: true,
             assignedToUser: {
               select: {
                 id: true,
@@ -81,29 +125,69 @@ export class TaskService {
                 email: true,
               },
             },
-          },
-          where: {
-            status: 'PENDING',
+            schedule: {
+              select: {
+                scheduledDate: true,
+              },
+            },
           },
         },
+        // Include schedules for due date filtering
+        recurringSchedules: {
+          where: {
+            scheduledDate: {
+              gte: startOfDay,
+              lt: endOfDay,
+            },
+          },
+          select: {
+            id: true,
+            scheduledDate: true,
+          },
+          take: 1,
+          orderBy: { scheduledDate: 'asc' }
+        }
       },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip,
+      orderBy: { nextDueDate: 'asc' },
     });
 
-    // Flatten and remove taskAssignments
-    return tasks.map(task => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      taskType: task.taskType,
-      nextDueDate: task.nextDueDate,
-      createdAt: task.createdAt,
-      category: task.category,
-      createdByUser: task.createdByUser,
-      assignedTo: task.taskAssignments.map(a => a.assignedToUser),
-    }));
+    return tasks.map(task => {
+      // ✅ Use schedule date if available, else use task.dueDate
+      const dueDate = task.recurringSchedules[0]?.scheduledDate || task.dueDate;
+
+      // ✅ Only show assignment if exists
+      const myAssignment = task.taskAssignments[0];
+      const myAssignments = task.taskAssignments;
+
+      return {
+        taskId: task.id,
+        title: task.title,
+        description: task.description,
+        taskType: task.taskType,
+        category: task.category?.name,
+        subcategory: task.subcategory?.name,
+        parameterLabel: task.parameterLabel,
+        parameterUnit: task.parameterUnit,
+        dueDate,
+        isAssigned: !!myAssignment,
+        assignments: myAssignments.map(assignment => ({
+          assignmentId: assignment.id,
+          status: assignment.status,
+          parameterValue: assignment.parameterValue,
+          comment: assignment.comment,
+          completedAt: assignment.completedAt,
+          assignedTo: {
+            id: assignment.assignedToUser.id,
+            fullName: `${assignment.assignedToUser.firstName} ${assignment.assignedToUser.lastName}`,
+            email: assignment.assignedToUser.email,
+          },
+          dueDate: assignment.schedule?.scheduledDate || task.dueDate,
+        })),
+        createdBy: task.createdByUser
+          ? `${task.createdByUser.firstName} ${task.createdByUser.lastName}`
+          : 'Unknown'
+      };
+    });
   }
 
 

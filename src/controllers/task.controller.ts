@@ -38,15 +38,24 @@ export const getTask = async (req: Request, res: Response) => {
 
 export const getAllTasks = async (req: Request, res: Response) => {
     try {
-        const { limit = 10, page = 1 } = req.query;
+        const { from, to, taskType } = req.query;
 
-        const limitNum = Math.min(Math.max(parseInt(limit as string, 10), 1), 100);
-        const pageNum = Math.max(parseInt(page as string, 10), 1);
+        const filters = {
+            taskType: taskType === 'ADHOC' || taskType === 'RECURRING' ? (taskType as 'ADHOC' | 'RECURRING') : undefined,
+            fromDate: from ? new Date(from as string) : undefined,
+            toDate: to ? new Date(to as string) : undefined,
+        };
 
-        const tasks = await TaskService.getUserTasks(req.user.id, limitNum, pageNum);
+        // Filter out undefined values to match the expected type
+        const filteredFilters = Object.fromEntries(
+            Object.entries(filters).filter(([_, value]) => value !== undefined)
+        ) as { taskType?: 'ADHOC' | 'RECURRING'; fromDate?: Date; toDate?: Date; };
+
+        const tasks = await TaskService.getUserTasks(req.user.id, filteredFilters);
 
         return successResponse(res, 'Tasks fetched successfully', tasks);
     } catch (error: any) {
+        console.error('Error fetching tasks:', error);
         return errorResponse(res, 500, 'Failed to fetch tasks');
     }
 };
@@ -102,27 +111,27 @@ export const deleteTask = async (req: Request, res: Response) => {
 };
 
 export const reassignTask = async (req: Request, res: Response) => {
-  try {
+    try {
 
-    const { id } = req.params;
+        const { id } = req.params;
 
-    if (!id) {
-      return errorResponse(res, 400, 'Invalid task ID');
+        if (!id) {
+            return errorResponse(res, 400, 'Invalid task ID');
+        }
+
+        const { userIds } = req.body;
+        const assignedBy = req.user.id;
+
+        const result = await AssignmentService.reassignTask(id, userIds, assignedBy);
+
+        return successResponse(res, 'Task reassigned for future instances', result);
+    } catch (error: any) {
+        if (error.message === 'Task not found') {
+            return errorResponse(res, 404, error.message);
+        }
+        if (error.message === 'Only recurring tasks can be reassigned') {
+            return errorResponse(res, 400, error.message);
+        }
+        return errorResponse(res, 500, 'Failed to reassign task');
     }
-
-    const { userIds } = req.body;
-    const assignedBy = req.user.id;
-
-    const result = await AssignmentService.reassignTask(id, userIds, assignedBy);
-
-    return successResponse(res, 'Task reassigned for future instances', result);
-  } catch (error: any) {
-    if (error.message === 'Task not found') {
-      return errorResponse(res, 404, error.message);
-    }
-    if (error.message === 'Only recurring tasks can be reassigned') {
-      return errorResponse(res, 400, error.message);
-    }
-    return errorResponse(res, 500, 'Failed to reassign task');
-  }
 };
