@@ -24,7 +24,14 @@ export class TaskService {
   static async getTaskWithAssignments(id: string) {
     return prisma.task.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        taskType: true,
+        parameterLabel: true,
+        parameterUnit: true,
+        dueDate: true,
         category: true,
         subcategory: true,
         createdByUser: { select: { firstName: true, lastName: true } },
@@ -155,8 +162,6 @@ export class TaskService {
       // ✅ Use schedule date if available, else use task.dueDate
       const dueDate = task.recurringSchedules[0]?.scheduledDate || task.dueDate;
 
-      // ✅ Only show assignment if exists
-      const myAssignment = task.taskAssignments[0];
       const myAssignments = task.taskAssignments;
 
       return {
@@ -169,7 +174,7 @@ export class TaskService {
         parameterLabel: task.parameterLabel,
         parameterUnit: task.parameterUnit,
         dueDate,
-        isAssigned: !!myAssignment,
+        isAssigned: myAssignments.length > 0,
         assignments: myAssignments.map(assignment => ({
           assignmentId: assignment.id,
           status: assignment.status,
