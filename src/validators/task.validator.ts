@@ -38,9 +38,11 @@ export const createTaskSchema = z.object({
   parameterUnit: z.string().max(50).optional().nullable(),
   parameterIsRequired: z.boolean().default(true),
   dropdownOptions: z.array(z.string()).min(1).max(20).optional(),
+  dueDate: z.string().datetime().optional().nullable(),
   repetitionConfig: repetitionConfigSchema.optional(),
   timezone: z.string().default('UTC'),
 })
+  // 1. Category required for RECURRING
   .refine(
     (data) => {
       if (data.taskType === 'RECURRING' && !data.categoryId) {
@@ -51,6 +53,39 @@ export const createTaskSchema = z.object({
     {
       message: 'Category is required for recurring tasks',
       path: ['categoryId'],
+    }
+  )
+
+  // 2. repetitionConfig required for RECURRING, not allowed for ADHOC
+  .refine(
+    (data) => {
+      if (data.taskType === 'RECURRING' && !data.repetitionConfig) {
+        return false;
+      }
+      if (data.taskType === 'ADHOC' && data.repetitionConfig) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'repetitionConfig is required for RECURRING and not allowed for ADHOC',
+      path: ['repetitionConfig'],
+    }
+  )
+  // 3. dueDate required for ADHOC, not allowed for RECURRING
+  .refine(
+    (data) => {
+      if (data.taskType === 'ADHOC' && !data.dueDate) {
+        return false;
+      }
+      if (data.taskType === 'RECURRING' && data.dueDate) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'dueDate is required for ADHOC and not allowed for RECURRING',
+      path: ['dueDate'],
     }
   );
 
