@@ -13,15 +13,16 @@ const router = Router();
  * POST /api/assignments
  * @description Assign a task to a member
  * @body :{
- *   "userId": "string",
- *   "taskIds": "string[]"
+ *   "userIds": "string[]",
+ *   "taskId": "string"
  * }
  * @returns {Assignment} - The created assignment
  */
 router.post('/', authenticate, authorize('ADMIN'), validate(assignTaskSchema), assignTask);
 
 /** Member marks assignment as complete
- * PATCH /api/assignments/:id/complete
+ * PATCH /api/assignments/:id/complete 
+ * id is the assignment id.
  * @description Mark an assignment as complete
  * @body :{
  *   "parameterValue": "string",

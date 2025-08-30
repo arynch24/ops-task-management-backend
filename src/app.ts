@@ -11,7 +11,7 @@ import taskRoutes from './routes/task.routes';
 import assignmentRoutes from './routes/assignment.route';
 import categoryRoutes from './routes/category.routes';
 import userRoutes from './routes/user.routes';
-import dashboardRoutes from './routes/dashboard.routes';
+// import dashboardRoutes from './routes/dashboard.routes';
 import subcategoryRoutes from './routes/subCategory.routes';
 
 const app: Application = express();
@@ -32,7 +32,7 @@ app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+// app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to OPS TASK MANAGER API!' });

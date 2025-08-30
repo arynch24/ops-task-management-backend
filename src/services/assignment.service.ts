@@ -1,5 +1,5 @@
 import { TaskAssignment, AssignmentStatus } from '@prisma/client';
-import { NotificationService } from './notification.service';
+// import { NotificationService } from './notification.service';
 import { prisma } from '../config/db';
 
 export class AssignmentService {
@@ -96,7 +96,7 @@ export class AssignmentService {
     });
 
     // Notify admin
-    await NotificationService.sendTaskCompletedEmail(assignment);
+    // await NotificationService.sendTaskCompletedEmail(assignment);
 
     return assignment;
   }
