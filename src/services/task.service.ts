@@ -222,13 +222,22 @@ export class TaskService {
         where: { taskId: id },
       });
 
-      // 5. Regenerate new schedules
+      // 4. Delete all task assignment groups
+      await prisma.taskAssignmentGroup.deleteMany({
+        where: { taskId: id },
+      });
+
+      // 5. Delete all task assignments
+      await prisma.taskAssignment.deleteMany({
+        where: { taskId: id },
+      });
+
+      // 6. Regenerate new schedules
       await ScheduleService.generateSchedulesForTask(updatedTask);
     }
 
     return updatedTask;
   }
-
 
   static async deleteTask(id: string) {
     return prisma.$transaction([
@@ -240,7 +249,11 @@ export class TaskService {
       prisma.taskAssignment.deleteMany({
         where: { taskId: id },
       }),
-      // 3. Delete the task
+      // 3. Delete all task assignment groups
+      prisma.taskAssignmentGroup.deleteMany({
+        where: { taskId: id },
+      }),
+      // 4. Delete the task
       prisma.task.delete({
         where: { id },
       }),
