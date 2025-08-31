@@ -11,7 +11,7 @@ export const assignTask = async (req: Request, res: Response) => {
 
         return successResponse(res, 'Task assigned successfully', assignments);
     } catch (error: any) {
-        return errorResponse(res, 500, 'Failed to assign task');
+        return errorResponse(res, 500, 'Failed to assign task', error.message);
     }
 };
 

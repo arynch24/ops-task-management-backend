@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import {
-    createTask,
-    getTask,
-    getAllTasks,
-    updateTask,
-    deleteTask,
-    reassignTask
+  createTask,
+  getTask,
+  getAllTasks,
+  updateTask,
+  deleteTask,
+  reassignTask
 } from '../controllers/task.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorize } from '../middlewares/authorize.middleware';
@@ -28,6 +28,7 @@ const router = Router();
  *   "parameterLabel": "string",
  *   "parameterUnit"(optional): "string",
  *   "dropdownOptions"(optional): "string[]",
+ *   "dueDate"(optional): "string", // ISO 8601 format compulsory for adhoc tasks
  *   "repetitionConfig"(optional): * Example:
    * {
    * type: "interval",
