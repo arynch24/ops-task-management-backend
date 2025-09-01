@@ -165,14 +165,12 @@ model Task {
   @@map("tasks")
 }
 
-/// One row per scheduled instance of a recurring task
 model RecurringTaskSchedule {
   id            String           @id @default(uuid())
   taskId        String           @db.VarChar(255)
   task          Task             @relation(fields: [taskId], references: [id])
-  scheduledDate DateTime // Date/time in UTC
+  scheduledDate DateTime
   status        ScheduleStatus   @default(PENDING)
-  assignmentIds String[]
   assignments   TaskAssignment[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -182,7 +180,6 @@ model RecurringTaskSchedule {
   @@map("recurring_task_schedules")
 }
 
-/// One assignment per user per scheduled task (or ad-hoc)
 model TaskAssignment {
   id             String                 @id @default(uuid())
   taskId         String                 @db.VarChar(255)
