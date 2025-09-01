@@ -38,20 +38,15 @@ export const getTask = async (req: Request, res: Response) => {
 
 export const getAllTasks = async (req: Request, res: Response) => {
     try {
-        const { from, to, taskType } = req.query;
+        const { taskType } = req.query;
 
-        const filters = {
-            taskType: taskType === 'ADHOC' || taskType === 'RECURRING' ? (taskType as 'ADHOC' | 'RECURRING') : undefined,
-            fromDate: from ? new Date(from as string) : undefined,
-            toDate: to ? new Date(to as string) : undefined,
-        };
+        const filters: { taskType?: 'ADHOC' | 'RECURRING' } = {};
 
-        // Filter out undefined values to match the expected type
-        const filteredFilters = Object.fromEntries(
-            Object.entries(filters).filter(([_, value]) => value !== undefined)
-        ) as { taskType?: 'ADHOC' | 'RECURRING'; fromDate?: Date; toDate?: Date; };
+        if (taskType === 'ADHOC' || taskType === 'RECURRING') {
+            filters.taskType = taskType as 'ADHOC' | 'RECURRING';
+        }
 
-        const tasks = await TaskService.getUserTasks(req.user.id, filteredFilters);
+        const tasks = await TaskService.getUserTasks(req.user.id, filters);
 
         return successResponse(res, 'Tasks fetched successfully', tasks);
     } catch (error: any) {

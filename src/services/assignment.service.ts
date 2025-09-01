@@ -92,8 +92,23 @@ export class AssignmentService {
         },
       });
 
+      const assignedTo = tx.taskAssignmentGroup.findUnique({
+        where: { taskId },
+        select: {
+          id: true,
+          assignedToIds: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          }
+        }
+      });
+
       // Return simple success — don't try to return assignment objects
-      return { task, assignmentGroup };
+      return { task, assignedTo };
     });
   }
 
