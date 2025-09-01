@@ -56,33 +56,33 @@ enum NotificationType {
 // Models
 
 model User {
-  id            String             @id @default(uuid())
-  email         String             @unique @db.VarChar(255)
-  firstName     String             @db.VarChar(100)
-  lastName      String             @db.VarChar(100)
-  role          Role               @default(MEMBER)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  firstName String   @db.VarChar(100)
+  lastName  String   @db.VarChar(100)
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  createdCategories    Category[]         @relation("CategoryCreator")
-  createdSubcategories Subcategory[]      @relation("SubcategoryCreator")
-  createdTasks         Task[]             @relation("TaskCreator")
-  assignedTasks        TaskAssignment[]   @relation("TaskAssignee")
-  assignedByTasks      TaskAssignment[]   @relation("TaskAssigner")
+  createdCategories    Category[]       @relation("CategoryCreator")
+  createdSubcategories Subcategory[]    @relation("SubcategoryCreator")
+  createdTasks         Task[]           @relation("TaskCreator")
+  assignedTasks        TaskAssignment[] @relation("TaskAssignee")
+  assignedByTasks      TaskAssignment[] @relation("TaskAssigner")
   notifications        Notification[]
 
   @@map("users")
 }
 
 model Category {
-  id          String             @id @default(uuid())
-  name        String             @db.VarChar(255)
-  description String?            @db.Text
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  createdBy   String             @db.VarChar(255)
-  createdByUser User             @relation("CategoryCreator", fields: [createdBy], references: [id])
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String   @db.VarChar(255)
+  createdByUser User     @relation("CategoryCreator", fields: [createdBy], references: [id])
 
   subcategories Subcategory[]
   tasks         Task[]
@@ -91,15 +91,15 @@ model Category {
 }
 
 model Subcategory {
-  id          String             @id @default(uuid())
-  name        String             @db.VarChar(255)
-  description String?            @db.Text
-  categoryId  String             @db.VarChar(255)
-  category    Category           @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  createdBy   String             @db.VarChar(255)
-  createdByUser User             @relation("SubcategoryCreator", fields: [createdBy], references: [id])
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  categoryId    String   @db.VarChar(255)
+  category      Category @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String   @db.VarChar(255)
+  createdByUser User     @relation("SubcategoryCreator", fields: [createdBy], references: [id])
 
   tasks Task[]
 
@@ -108,67 +108,73 @@ model Subcategory {
 
 /// Represents a template for a task (either one-time or recurring)
 model Task {
-  id                  String               @id @default(uuid())
-  title               String               @db.VarChar(255)
-  description         String?              @db.Text
-  categoryId          String?              @db.VarChar(255)
-  subcategoryId       String?              @db.VarChar(255)
-  category            Category?            @relation(fields: [categoryId], references: [id])
-  subcategory         Subcategory?         @relation(fields: [subcategoryId], references: [id])
-  createdBy           String               @db.VarChar(255)
-  createdByUser       User                 @relation("TaskCreator", fields: [createdBy], references: [id])
+  id            String  @id @default(uuid())
+  title         String  @db.VarChar(255)
+  description   String? @db.Text
+  categoryId    String? @db.VarChar(255)
+  subcategoryId String? @db.VarChar(255)
+
+  /// Required for recurring tasks (enforced in application layer)
+  category            Category?     @relation(fields: [categoryId], references: [id])
+  subcategory         Subcategory?  @relation(fields: [subcategoryId], references: [id])
+  createdBy           String        @db.VarChar(255)
+  createdByUser       User          @relation("TaskCreator", fields: [createdBy], references: [id])
   taskType            TaskType
   parameterType       ParameterType
-  parameterLabel      String               @db.VarChar(255) // e.g., "Battery Voltage"
-  parameterUnit       String?              @db.VarChar(50)  // e.g., "Volts", "°C", "psi"
-  parameterIsRequired Boolean              @default(true)
-  dropdownOptions     String[]             // Only for DROPDOWN type, e.g., ["High", "Medium", "Low"]
-  repetitionConfig    Json?                // Rule-based config for recurring tasks
-  /*
-    Example:
-    {
-      type: "interval",
-      days: 3,
-      atTime: "09:00",
-      timezone: "Asia/Kolkata",
-      endsAfterMonths: 6
-    }
-    OR
-    {
-      type: "weekly",
-      onDays: ["MON", "WED", "FRI"],
-      atTime: "10:30",
-      timezone: "UTC"
-    }
-    OR
-    {
-      type: "monthly",
-      onDate: 15,
-      atTime: "08:00"
-    }
-  */
-  timezone            String?              @default("UTC") // Task execution timezone
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  parameterLabel      String        @db.VarChar(255) // e.g., "Battery Voltage"
+  parameterUnit       String?       @db.VarChar(50) // e.g., "Volts", "°C", "psi"
+  parameterIsRequired Boolean       @default(true)
+  dropdownOptions     String[] // Only for DROPDOWN type, e.g., ["High", "Medium", "Low"]
+  repetitionConfig    Json? // Rule-based config for recurring tasks
+  /**
+   * Example:
+   * {
+   * type: "interval",
+   * days: 3,
+   * atTime: "09:00",
+   * }
+   * OR
+   * {
+   * type: "weekly",
+   * onDays: ["MON", "WED", "FRI"],
+   * atTime: "10:30",
+   * }
+   * OR
+   * {
+   * type: "monthly",
+   * onDate: 15,
+   * atTime: "08:00"
+   * }
+   */
+
+  // ✅ Add these two fields
+  nextDueDate   DateTime? // Next upcoming scheduled date
+  lastGenerated DateTime? // When schedules were last generated (e.g., 6 months out)
+  dueDate       DateTime? // Optional: for ADHOC tasks
+
+  timezone  String?  @default("UTC") // Task execution timezone
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  recurringSchedules RecurringTaskSchedule[]
-  taskAssignments    TaskAssignment[]
+  recurringSchedules  RecurringTaskSchedule[]
+  taskAssignments     TaskAssignment[]
+  TaskAssignmentGroup TaskAssignmentGroup?
 
   @@map("tasks")
 }
 
 /// One row per scheduled instance of a recurring task
 model RecurringTaskSchedule {
-  id            String             @id @default(uuid())
-  taskId        String             @db.VarChar(255)
-  task          Task               @relation(fields: [taskId], references: [id])
-  scheduledDate DateTime           // Date/time in UTC
-  status        ScheduleStatus     @default(PENDING)
-  assignmentId  String?            @unique // Points to one assignment if assigned
-  assignment    TaskAssignment?    @relation(fields: [assignmentId], references: [id])
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id            String          @id @default(uuid())
+  taskId        String          @db.VarChar(255)
+  task          Task            @relation(fields: [taskId], references: [id])
+  scheduledDate DateTime // Date/time in UTC
+  status        ScheduleStatus  @default(PENDING)
+  assignmentId  String?         @unique // Points to one assignment if assigned
+  assignment    TaskAssignment?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@index([taskId, scheduledDate])
   @@index([scheduledDate, status])
@@ -177,42 +183,57 @@ model RecurringTaskSchedule {
 
 /// One assignment per user per scheduled task (or ad-hoc)
 model TaskAssignment {
-  id               String               @id @default(uuid())
-  taskId           String               @db.VarChar(255)
-  task             Task                 @relation(fields: [taskId], references: [id])
-  scheduleId       String?              @unique // Optional: only for recurring tasks
-  schedule         RecurringTaskSchedule?
-  assignedTo       String               @db.VarChar(255)
-  assignedToUser   User                 @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  assignedBy       String               @db.VarChar(255)
-  assignedByUser   User                 @relation("TaskAssigner", fields: [assignedBy], references: [id])
-  status           AssignmentStatus     @default(PENDING)
-  parameterValue   String?              @db.Text // Store submitted value as string (parse based on type)
-  comment          String?              @db.Text
-  completedAt      DateTime?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
+  id             String                 @id @default(uuid())
+  taskId         String                 @db.VarChar(255)
+  task           Task                   @relation(fields: [taskId], references: [id])
+  scheduleId     String?                @unique // Optional: only for recurring tasks
+  schedule       RecurringTaskSchedule? @relation(fields: [scheduleId], references: [id])
+  assignedTo     String                 @db.VarChar(255)
+  assignedToUser User                   @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  assignedBy     String                 @db.VarChar(255)
+  assignedByUser User                   @relation("TaskAssigner", fields: [assignedBy], references: [id])
+  status         AssignmentStatus       @default(PENDING)
+  parameterValue String?                @db.Text // Store submitted value as string (parse based on type)
+  comment        String?                @db.Text
+  completedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   notifications Notification[]
 
   @@index([assignedTo, status])
   @@index([taskId, scheduleId])
   @@map("task_assignments")
+
+   // 🔐 Prevent duplicate assignments
+  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
+}
+
+model TaskAssignmentGroup {
+  id            String   @id @default(uuid())
+  taskId        String   @unique
+  task          Task     @relation(fields: [taskId], references: [id])
+  assignedToIds String[] // Array of user IDs
+  assignedBy    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("task_assignment_groups")
 }
 
 /// Notifications (email logs + read status)
 model Notification {
-  id               String             @id @default(uuid())
-  userId           String             @db.VarChar(255)
-  user             User               @relation(fields: [userId], references: [id])
-  taskAssignmentId String?            @db.VarChar(255)
-  taskAssignment   TaskAssignment?    @relation(fields: [taskAssignmentId], references: [id])
+  id               String           @id @default(uuid())
+  userId           String           @db.VarChar(255)
+  user             User             @relation(fields: [userId], references: [id])
+  taskAssignmentId String?          @db.VarChar(255)
+  taskAssignment   TaskAssignment?  @relation(fields: [taskAssignmentId], references: [id])
   type             NotificationType
-  message          String             @db.Text
-  isRead           Boolean            @default(false)
-  emailSent        Boolean            @default(false)
-  emailError       String?            // If email failed
-  createdAt        DateTime           @default(now())
+  message          String           @db.Text
+  isRead           Boolean          @default(false)
+  emailSent        Boolean          @default(false)
+  emailError       String? // If email failed
+  createdAt        DateTime         @default(now())
 
   @@index([userId, isRead])
   @@index([type, createdAt])

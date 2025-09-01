@@ -5,7 +5,7 @@ import { config } from "../config";
 
 const router = Router();
 
-// Google OAuth Start
+/* Google OAuth Start */
 router.get('/google', (req, res) => {
     const scope = [
         'https://www.googleapis.com/auth/userinfo.email',
@@ -25,11 +25,13 @@ router.get('/google', (req, res) => {
     res.redirect(url);
 });
 
-// Google Callback
+/** Google Callback */
 router.get('/google/callback', AuthController.googleAuthCallback);
 
-// Protected routes for both users and admins
+/** Get current user */
 router.get('/me', authenticate, AuthController.me);
+
+/** Logout user */
 router.post('/logout', authenticate, AuthController.logout);
 
 export default router;

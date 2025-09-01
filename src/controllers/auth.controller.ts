@@ -23,6 +23,11 @@ export class AuthController {
       });
 
       // Redirect or return success
+      if (user.role === 'ADMIN') {
+        res.redirect(`${config.clientUrl}/admin`);
+      } else {
+        res.redirect(`${config.clientUrl}/operation`);
+      }
       return successResponse(res, 'Google Auth successful', { user });
     } catch (error: any) {
       console.error('Google Auth Error:', error);
