@@ -4,112 +4,124 @@ import { prisma } from '../config/db';
 
 export class AssignmentService {
 
+
   /**
-   * Assign a task to multiple users
-   */
+ * Assign a task to multiple users
+ * - Prevents duplicate assignment
+ * - Updates TaskAssignmentGroup
+ * - Creates taskAssignments for pending schedules (recurring) or immediately (adhoc)
+ * - Returns full user details
+ */
   static async assignTaskToUsers(taskId: string, userIds: string[], assignedBy: string) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId },
-        include: {
-          recurringSchedules: {
-            where: { status: 'PENDING' },
-            orderBy: { scheduledDate: 'asc' },
-          },
-        },
-      });
-
-      if (!task) throw new Error('Task not found');
-      if (task.taskType === 'RECURRING' && task.recurringSchedules.length === 0) {
-        throw new Error('No pending schedules to assign');
-      }
-
-      let data: any[];
-
-      if (task.taskType === 'ADHOC') {
-
-        const existingAssignments = await tx.taskAssignment.findMany({
-          where: {
-            taskId,
-            assignedTo: { in: userIds },
-            status: AssignmentStatus.PENDING,
-          },
-        });
-
-        if (existingAssignments.length > 0) {
-          const existingUserIds = existingAssignments.map(a => a.assignedTo);
-          throw new Error(`Task already assigned to users: ${existingUserIds.join(', ')}`);
-        }
-
-        data = userIds.map(userId => ({
-          taskId,
-          assignedTo: userId,
-          assignedBy,
-          status: AssignmentStatus.PENDING,
-        }));
-
-        await tx.taskAssignment.createMany({
-          data,
-        });
-      } else {
-        const scheduleIds = task.recurringSchedules.map(s => s.id);
-
-        data = userIds.flatMap(userId =>
-          scheduleIds.map(scheduleId => ({
-            taskId,
-            scheduleId,
-            assignedTo: userId,
-            assignedBy,
-            status: AssignmentStatus.PENDING,
-          }))
-        );
-
-        await tx.taskAssignment.createMany({
-          data,
-        });
-
-        await tx.recurringTaskSchedule.updateMany({
-          where: { id: { in: scheduleIds } },
-          data: { status: 'ASSIGNED' },
-        });
-      }
-
-      // Record assignment intent for future schedules
-      const assignmentGroup = await tx.taskAssignmentGroup.upsert({
-        where: { taskId },
-        create: {
-          taskId,
-          assignedToIds: {
-            connect: userIds.map(id => ({ id }))
-          },
-          assignedBy,
-        },
-        update: {
-          assignedToIds: {
-            set: userIds.map(id => ({ id }))
-          },
-          assignedBy
-        },
-      });
-
-      const assignedTo = tx.taskAssignmentGroup.findUnique({
-        where: { taskId },
-        select: {
-          id: true,
-          assignedToIds: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          }
-        }
-      });
-
-      // Return simple success — don't try to return assignment objects
-      return { task, assignedTo };
+    // ✅ Fetch user details outside transaction to reduce load
+    const newUsers = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
     });
+
+    if (newUsers.length !== userIds.length) {
+      const foundIds = newUsers.map(u => u.id);
+      const missing = userIds.filter(id => !foundIds.includes(id));
+      throw new Error(`Users not found: ${missing.join(', ')}`);
+    }
+
+    return prisma.$transaction(
+      async (tx) => {
+        const task = await tx.task.findUnique({
+          where: { id: taskId },
+          include: {
+            TaskAssignmentGroup: {
+              include: {
+                assignedToIds: true
+              }
+            }, // Only need assignedToIds (IDs)
+            recurringSchedules: {
+              where: { status: 'PENDING' },
+              select: { id: true }, // Only schedule IDs needed
+              orderBy: { scheduledDate: 'asc' },
+            },
+          },
+        });
+
+        if (!task) {
+          throw new Error('Task not found');
+        }
+
+        // Get current assignee IDs from TaskAssignmentGroup
+        const currentAssigneeIds = task.TaskAssignmentGroup?.assignedToIds?.map(user => user.id) || [];
+
+        // Prevent re-assigning to already assigned users
+        const duplicates = userIds.filter(id => currentAssigneeIds.includes(id));
+        if (duplicates.length > 0) {
+          throw new Error(`Task already assigned to users: ${duplicates.join(', ')}`);
+        }
+
+        // Update or create TaskAssignmentGroup (add new users)
+        await tx.taskAssignmentGroup.upsert({
+          where: { taskId },
+          create: {
+            taskId,
+            assignedBy,
+            assignedToIds: { connect: userIds.map(id => ({ id })) },
+          },
+          update: {
+            assignedBy,
+            assignedToIds: { connect: userIds.map(id => ({ id })) },
+          },
+        });
+
+        // ✅ Create task assignments
+        if (task.taskType === 'ADHOC') {
+          const data = newUsers.map(user => ({
+            taskId,
+            assignedTo: user.id,
+            assignedBy,
+            status: 'PENDING' as const,
+          }));
+
+          await tx.taskAssignment.createMany({ data });
+        } else {
+          const scheduleIds = task.recurringSchedules.map(s => s.id);
+          if (scheduleIds.length === 0) {
+            throw new Error('No pending schedules to assign');
+          }
+
+          const data = newUsers.flatMap(user =>
+            scheduleIds.map(scheduleId => ({
+              taskId,
+              scheduleId,
+              assignedTo: user.id,
+              assignedBy,
+              status: 'PENDING' as const,
+            }))
+          );
+
+          await tx.taskAssignment.createMany({ data });
+
+          // ✅ Mark schedules as ASSIGNED
+          await tx.recurringTaskSchedule.updateMany({
+            where: { id: { in: scheduleIds } },
+            data: { status: 'ASSIGNED' },
+          });
+        }
+
+        // ✅ Return success with full user details
+        return {
+          success: true,
+          taskId,
+          assignedTo: newUsers,
+          message: `Task assigned to ${newUsers.length} user(s)`,
+        };
+      },
+      {
+        timeout: 15000, // ✅ 15s timeout to prevent "transaction expired" error
+      }
+    );
   }
 
   /**
