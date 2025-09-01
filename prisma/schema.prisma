@@ -148,8 +148,6 @@ model Task {
    * }
    */
 
-  // ✅ Add these two fields
-  nextDueDate   DateTime? // Next upcoming scheduled date
   lastGenerated DateTime? // When schedules were last generated (e.g., 6 months out)
   dueDate       DateTime? // Optional: for ADHOC tasks
 

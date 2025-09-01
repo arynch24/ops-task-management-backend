@@ -15,16 +15,14 @@ export class ScheduleService {
         const [hourStr, minuteStr] = atTime.split(':');
 
         if (!hourStr || !minuteStr) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const hour = parseInt(hourStr, 10);
         const minute = parseInt(minuteStr, 10);
 
         if (isNaN(hour) || isNaN(minute)) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const endDate = addMonths(startDate, 1);
@@ -45,7 +43,6 @@ export class ScheduleService {
             current = addDays(current, days);
         }
 
-        console.log(`[Interval] Generated ${dates.length} dates:`, dates.map(d => d.toISOString()));
         return dates;
     }
 
@@ -64,16 +61,14 @@ export class ScheduleService {
         const [hourStr, minuteStr] = atTime.split(':');
 
         if (!hourStr || !minuteStr) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const hour = parseInt(hourStr, 10);
         const minute = parseInt(minuteStr, 10);
 
         if (isNaN(hour) || isNaN(minute)) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const endDate = addMonths(startDate, 1);
@@ -94,7 +89,6 @@ export class ScheduleService {
             current = addDays(current, 1);
         }
 
-        console.log(`[Weekly] Generated ${dates.length} dates:`, dates.map(d => d.toISOString()));
         return dates;
     }
 
@@ -109,16 +103,14 @@ export class ScheduleService {
         const [hourStr, minuteStr] = atTime.split(':');
 
         if (!hourStr || !minuteStr) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const hour = parseInt(hourStr, 10);
         const minute = parseInt(minuteStr, 10);
 
         if (isNaN(hour) || isNaN(minute)) {
-            console.error(`Invalid atTime format: ${atTime}`);
-            return [];
+            throw new Error(`Invalid atTime format: ${atTime}`);
         }
 
         const endDate = addMonths(startDate, 1);
@@ -138,28 +130,25 @@ export class ScheduleService {
             current = addMonths(current, 1);
         }
 
-        console.log(`[Monthly] Generated ${dates.length} dates:`, dates.map(d => d.toISOString()));
         return dates;
     }
 
     /**
-     * Main method: Generate recurring schedules for a task and update nextDueDate
+     * Main method: Generate recurring schedules for a task  (if applicable)
      */
     static async generateSchedulesForTask(task: Task) {
         if (task.taskType !== 'RECURRING' || !task.repetitionConfig) {
-            console.log(`Skipping schedule generation for task ${task.id} (not recurring or no config)`);
-            return;
+            throw new Error(`Skipping schedule generation for task ${task.id} (not recurring or no config)`);
         }
 
         let config: RepetitionConfig;
         try {
             config = repetitionConfigSchema.parse(task.repetitionConfig);
         } catch (error) {
-            console.error(`Invalid repetitionConfig for task ${task.id}:`, error);
-            return;
+            throw new Error(`Invalid repetitionConfig for task ${task.id}: ${error}`);
         }
 
-        // ✅ Start from the last existing schedule, not task.createdAt
+        // Start from the last existing schedule, not task.createdAt
         const lastSchedule = await prisma.recurringTaskSchedule.findFirst({
             where: { taskId: task.id },
             orderBy: { scheduledDate: 'desc' },
@@ -176,26 +165,22 @@ export class ScheduleService {
 
         const generate = generators[config.type];
         if (!generate) {
-            console.error(`Unsupported recurrence type: ${config.type} for task ${task.id}`);
-            return;
+            throw new Error(`Unsupported recurrence type: ${config.type} for task ${task.id}`);
         }
 
         let dateList: Date[];
         try {
             dateList = generate(config, startDate);
         } catch (error) {
-            console.error(`Failed to generate dates for task ${task.id}:`, error);
-            return;
+            throw new Error(`Date generation failed for task ${task.id}: ${error}`);
         }
 
         if (dateList.length === 0) {
-            console.warn(`No dates generated for task ${task.id}`);
-            return;
+            throw new Error(`No dates generated for task ${task.id}`);
         }
 
-        // ✅ Sort to find next due date
+        //  Sort to find next due date
         const sortedDates = [...dateList].sort((a, b) => a.getTime() - b.getTime());
-        const nextDueDate = sortedDates[0];
 
         const schedules = sortedDates.map(date => ({
             taskId: task.id,
@@ -209,26 +194,20 @@ export class ScheduleService {
             await prisma.recurringTaskSchedule.createMany({
                 data: schedules,
             });
-            console.log(`✅ Created ${schedules.length} schedules for task ${task.id}`);
         } catch (error) {
-            console.error(`❌ Failed to create schedules for task ${task.id}:`, error);
-            return;
+            throw new Error(`Failed to create schedules for task ${task.id}: ${error}`);
         }
 
-        // ✅ Update nextDueDate and lastGenerated
-        if (nextDueDate) {
-            try {
-                await prisma.task.update({
-                    where: { id: task.id },
-                    data: {
-                        nextDueDate,
-                        lastGenerated: new Date(),
-                    },
-                });
-                console.log(`✅ Updated nextDueDate for task ${task.id} to ${nextDueDate.toISOString()}`);
-            } catch (error) {
-                console.error(`❌ Failed to update task ${task.id} with nextDueDate:`, error);
-            }
+        try {
+            await prisma.task.update({
+                where: { id: task.id },
+                data: {
+                    lastGenerated: new Date(),
+                },
+            });
+        } catch (error) {
+            throw new Error(`Failed to update lastGenerated for task ${task.id}: ${error}`);
         }
     }
+
 }

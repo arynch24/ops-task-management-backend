@@ -79,7 +79,6 @@ export class TaskService {
         parameterLabel: true,
         parameterUnit: true,
         dueDate: true, // for ADHOC
-        nextDueDate: true,
         category: {
           select: { name: true }
         },
