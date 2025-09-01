@@ -167,15 +167,15 @@ model Task {
 
 /// One row per scheduled instance of a recurring task
 model RecurringTaskSchedule {
-  id            String          @id @default(uuid())
-  taskId        String          @db.VarChar(255)
-  task          Task            @relation(fields: [taskId], references: [id])
+  id            String           @id @default(uuid())
+  taskId        String           @db.VarChar(255)
+  task          Task             @relation(fields: [taskId], references: [id])
   scheduledDate DateTime // Date/time in UTC
-  status        ScheduleStatus  @default(PENDING)
-  assignmentId  String?         @unique // Points to one assignment if assigned
-  assignment    TaskAssignment?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  status        ScheduleStatus   @default(PENDING)
+  assignmentIds String[]
+  assignments   TaskAssignment[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([taskId, scheduledDate])
   @@index([scheduledDate, status])
@@ -187,7 +187,7 @@ model TaskAssignment {
   id             String                 @id @default(uuid())
   taskId         String                 @db.VarChar(255)
   task           Task                   @relation(fields: [taskId], references: [id])
-  scheduleId     String?                @unique // Optional: only for recurring tasks
+  scheduleId     String?
   schedule       RecurringTaskSchedule? @relation(fields: [scheduleId], references: [id])
   assignedTo     String                 @db.VarChar(255)
   assignedToUser User                   @relation("TaskAssignee", fields: [assignedTo], references: [id])

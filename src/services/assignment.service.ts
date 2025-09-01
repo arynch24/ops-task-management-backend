@@ -41,7 +41,6 @@ export class AssignmentService {
               }
             }, // Only need assignedToIds (IDs)
             recurringSchedules: {
-              where: { status: 'PENDING' },
               select: { id: true }, // Only schedule IDs needed
               orderBy: { scheduledDate: 'asc' },
             },
@@ -207,7 +206,7 @@ export class AssignmentService {
       const pendingSchedules = await tx.recurringTaskSchedule.findMany({
         where: {
           taskId,
-          assignmentId: null,
+          assignmentIds: { isEmpty: true },
         },
         select: { id: true }
       });

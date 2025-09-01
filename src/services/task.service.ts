@@ -120,7 +120,7 @@ export class TaskService {
           },
         },
         TaskAssignmentGroup: {
-          select:{
+          select: {
             id: true,
             assignedToIds: {
               select: {
@@ -151,13 +151,13 @@ export class TaskService {
         parameterUnit: task.parameterUnit,
         dueDate,
         assignedTo: task.TaskAssignmentGroup?.assignedToIds.map((assignee) => {
-          return{
+          return {
             id: assignee.id,
             firstName: assignee.firstName,
             lastName: assignee.lastName,
             email: assignee.email,
           }
-        }),
+        }) || [],
         createdBy: task.createdByUser
           ? `${task.createdByUser.firstName} ${task.createdByUser.lastName}`
           : 'Unknown'
