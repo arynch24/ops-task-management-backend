@@ -65,11 +65,12 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  createdCategories    Category[]       @relation("CategoryCreator")
-  createdSubcategories Subcategory[]    @relation("SubcategoryCreator")
-  createdTasks         Task[]           @relation("TaskCreator")
-  assignedTasks        TaskAssignment[] @relation("TaskAssignee")
-  assignedByTasks      TaskAssignment[] @relation("TaskAssigner")
+  createdCategories    Category[]            @relation("CategoryCreator")
+  createdSubcategories Subcategory[]         @relation("SubcategoryCreator")
+  createdTasks         Task[]                @relation("TaskCreator")
+  assignedTasks        TaskAssignment[]      @relation("TaskAssignee")
+  assignedByTasks      TaskAssignment[]      @relation("TaskAssigner")
+  assignmentGroups     TaskAssignmentGroup[] @relation("AssignedUsers")
   notifications        Notification[]
 
   @@map("users")
@@ -201,19 +202,18 @@ model TaskAssignment {
 
   notifications Notification[]
 
+  // 🔐 Prevent duplicate assignments
+  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
   @@index([assignedTo, status])
   @@index([taskId, scheduleId])
   @@map("task_assignments")
-
-   // 🔐 Prevent duplicate assignments
-  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
 }
 
 model TaskAssignmentGroup {
   id            String   @id @default(uuid())
   taskId        String   @unique
   task          Task     @relation(fields: [taskId], references: [id])
-  assignedToIds String[] // Array of user IDs
+  assignedToIds User[]   @relation("AssignedUsers")
   assignedBy    String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
