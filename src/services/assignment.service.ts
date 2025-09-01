@@ -74,19 +74,26 @@ export class AssignmentService {
         });
       }
 
-      // ✅ NEW: Record assignment intent for future schedules
-      await tx.taskAssignmentGroup.upsert({
+      // Record assignment intent for future schedules
+      const assignmentGroup = await tx.taskAssignmentGroup.upsert({
         where: { taskId },
         create: {
           taskId,
-          assignedToIds: userIds,
+          assignedToIds: {
+            connect: userIds.map(id => ({ id }))
+          },
           assignedBy,
         },
-        update: { assignedToIds: userIds, assignedBy },
+        update: {
+          assignedToIds: {
+            set: userIds.map(id => ({ id }))
+          },
+          assignedBy
+        },
       });
 
-      // ✅ Return simple success — don't try to return assignment objects
-      return { success: true, count: data.length };
+      // Return simple success — don't try to return assignment objects
+      return { task, assignmentGroup };
     });
   }
 
@@ -128,6 +135,11 @@ export class AssignmentService {
             subcategory: true,
           },
         },
+        schedule: {
+          select: {
+            scheduledDate: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -140,9 +152,12 @@ export class AssignmentService {
   static async getCurrentAssignees(taskId: string): Promise<string[]> {
     const group = await prisma.taskAssignmentGroup.findUnique({
       where: { taskId },
+      include: {
+        assignedToIds: true,
+      },
     });
 
-    return group?.assignedToIds || [];
+    return group?.assignedToIds?.map(user => user.id) || [];
   }
 
   /**
@@ -238,19 +253,22 @@ export class AssignmentService {
         throw new Error('Task not found');
       }
 
-      if (task.taskType !== 'RECURRING') {
-        throw new Error('Only recurring tasks can be reassigned');
-      }
-
       // Update or create TaskAssignmentGroup
       await tx.taskAssignmentGroup.upsert({
         where: { taskId },
         create: {
           taskId,
-          assignedToIds: userIds,
+          assignedToIds: {
+            connect: userIds.map(id => ({ id }))
+          },
           assignedBy,
         },
-        update: { assignedToIds: userIds, assignedBy },
+        update: {
+          assignedToIds: {
+            set: userIds.map(id => ({ id }))
+          },
+          assignedBy
+        },
       });
 
       return { success: true, taskId, reassignedTo: userIds };

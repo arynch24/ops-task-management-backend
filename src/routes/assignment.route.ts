@@ -35,8 +35,8 @@ router.patch('/:id/complete', authenticate, validate(completeAssignmentSchema), 
 /** Member views their assignments
  * @returns {Assignment[]} - The list of assignments
  */
-router.get('/', authenticate, getMyAssignments);
+router.get('/', authenticate, authorize('MEMBER'), getMyAssignments);
 
-router.get('/tasks', authenticate, authorize('ADMIN'), getAllTasksWithDetails);
+// router.get('/tasks', authenticate, authorize('ADMIN'), getAllTasksWithDetails);
 
 export default router;
