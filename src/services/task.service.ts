@@ -63,9 +63,9 @@ export class TaskService {
 
     // Build where clause for Task
     const taskWhere: Prisma.TaskWhereInput = {
-      OR: [
-        { createdBy: userId },
-      ],
+      // OR: [
+      //   // { createdBy: userId },
+      // ],
       ...(taskType && { taskType }),
     };
 
@@ -91,7 +91,7 @@ export class TaskService {
         // Get assignments for this user only
         taskAssignments: {
           where: {
-            assignedBy: userId,
+            // assignedBy: userId,
             OR: [
               {
                 schedule: {
