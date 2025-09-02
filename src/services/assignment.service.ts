@@ -206,7 +206,7 @@ export class AssignmentService {
       const pendingSchedules = await tx.recurringTaskSchedule.findMany({
         where: {
           taskId,
-          // assignmentIds: { isEmpty: true },
+          status: 'PENDING',
         },
         select: { id: true }
       });

@@ -26,6 +26,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.3.0",
+    "@types/nodemailer": "^7.0.1",
     "eslint": "^9.34.0",
     "prisma": "^6.15.0",
     "ts-node": "^10.9.2",
@@ -44,6 +45,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.6",
     "zod": "^4.1.4"
   }
 }
