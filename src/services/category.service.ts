@@ -49,8 +49,13 @@ export class CategoryService {
     }
 
     static async deleteCategory(id: string) {
-        return prisma.category.delete({
-            where: { id },
+        return prisma.$transaction(async (tx) => {
+            await tx.subcategory.deleteMany({
+            where: { categoryId: id },
+            });
+            return tx.category.delete({
+                where: { id },
+            });
         });
     }
 }
