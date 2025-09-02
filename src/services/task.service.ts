@@ -1,4 +1,4 @@
-import { PrismaClient, Task, Prisma } from '@prisma/client';
+import { PrismaClient, Task, Prisma, ParameterType } from '@prisma/client';
 import { repetitionConfigSchema } from '../validators/task.validator';
 import { ScheduleService } from './schedule.service';
 import { prisma } from '../config/db';
@@ -6,19 +6,21 @@ import { prisma } from '../config/db';
 export class TaskService {
 
   static async createTask(data: any, createdBy: string) {
-    const task = await prisma.task.create({
-      data: {
-        ...data,
-        createdBy,
-      },
+    return await prisma.$transaction(async (tx) => {
+      const task = await tx.task.create({
+        data: {
+          ...data,
+          createdBy,
+        },
+      });
+
+      // If recurring, generate schedules
+      if (task.taskType === 'RECURRING' && task.repetitionConfig) {
+        await ScheduleService.generateSchedulesForTask(task);
+      }
+
+      return task;
     });
-
-    // If recurring, generate schedules
-    if (task.taskType === 'RECURRING' && task.repetitionConfig) {
-      await ScheduleService.generateSchedulesForTask(task);
-    }
-
-    return task;
   }
 
   static async getTaskWithAssignments(id: string) {
@@ -76,9 +78,11 @@ export class TaskService {
         title: true,
         description: true,
         taskType: true,
+        parameterType: true,
         parameterLabel: true,
         parameterUnit: true,
         dueDate: true, // for ADHOC
+        repetitionConfig: true, // Rule-based config for recurring tasks
         category: {
           select: { name: true }
         },
@@ -146,9 +150,11 @@ export class TaskService {
         taskType: task.taskType,
         category: task.category?.name,
         subcategory: task.subcategory?.name,
+        parameterType: task.parameterType,
         parameterLabel: task.parameterLabel,
         parameterUnit: task.parameterUnit,
         dueDate,
+        repetitionConfig: task.repetitionConfig,
         assignedTo: task.TaskAssignmentGroup?.assignedToIds.map((assignee) => {
           return {
             id: assignee.id,
