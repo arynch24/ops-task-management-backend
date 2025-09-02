@@ -52,24 +52,20 @@ export class TaskService {
     userId: string,
     filters?: {
       taskType?: 'ADHOC' | 'RECURRING';
-      fromDate?: Date;
-      toDate?: Date;
     }
   ) {
 
-    const { taskType, fromDate, toDate } = filters || {};
-    const startDate = fromDate || new Date();
-    const endDate = toDate || new Date();
+    const { taskType } = filters || {};
+    const startDate = new Date();
 
     // Normalize to UTC start/end of day
     const startOfDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-    const endOfDay = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate() + 1));
 
     // Build where clause for Task
     const taskWhere: Prisma.TaskWhereInput = {
-      OR: [
-        { createdBy: userId },
-      ],
+      // OR: [
+      //   // { createdBy: userId },
+      // ],
       ...(taskType && { taskType }),
     };
 
@@ -83,7 +79,6 @@ export class TaskService {
         parameterLabel: true,
         parameterUnit: true,
         dueDate: true, // for ADHOC
-        nextDueDate: true,
         category: {
           select: { name: true }
         },
@@ -93,28 +88,20 @@ export class TaskService {
         createdByUser: {
           select: { firstName: true, lastName: true }
         },
-        // ✅ Get assignments for this user only
+        // Get assignments for this user only
         taskAssignments: {
           where: {
-            assignedBy: userId,
+            // assignedBy: userId,
             OR: [
-              // Recurring: filter by schedule date
               {
                 schedule: {
                   scheduledDate: {
                     gte: startOfDay,
-                    lt: endOfDay,
                   },
                 },
               },
-              // Ad-hoc: filter by createdAt
               {
-                task: {
-                  dueDate: {
-                    gte: startOfDay,
-                    lt: endOfDay,
-                  },
-                }
+                schedule: null, // if schedule itself is nullable
               },
             ],
           },
@@ -124,14 +111,6 @@ export class TaskService {
             parameterValue: true,
             comment: true,
             completedAt: true,
-            assignedToUser: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
             schedule: {
               select: {
                 scheduledDate: true,
@@ -139,30 +118,26 @@ export class TaskService {
             },
           },
         },
-        // Include schedules for due date filtering
-        recurringSchedules: {
-          where: {
-            scheduledDate: {
-              gte: startOfDay,
-              lt: endOfDay,
-            },
-          },
+        TaskAssignmentGroup: {
           select: {
             id: true,
-            scheduledDate: true,
-          },
-          take: 1,
-          orderBy: { scheduledDate: 'asc' }
-        }
+            assignedToIds: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            }
+          }
+        },
       },
-      orderBy: { nextDueDate: 'asc' },
     });
 
     return tasks.map(task => {
       // ✅ Use schedule date if available, else use task.dueDate
-      const dueDate = task.recurringSchedules[0]?.scheduledDate || task.dueDate;
-
-      const myAssignments = task.taskAssignments;
+      const myAssignment = task.taskAssignments[0];
+      const dueDate = myAssignment?.schedule?.scheduledDate || task.dueDate;
 
       return {
         taskId: task.id,
@@ -174,27 +149,20 @@ export class TaskService {
         parameterLabel: task.parameterLabel,
         parameterUnit: task.parameterUnit,
         dueDate,
-        isAssigned: myAssignments.length > 0,
-        assignments: myAssignments.map(assignment => ({
-          assignmentId: assignment.id,
-          status: assignment.status,
-          parameterValue: assignment.parameterValue,
-          comment: assignment.comment,
-          completedAt: assignment.completedAt,
-          assignedTo: {
-            id: assignment.assignedToUser.id,
-            fullName: `${assignment.assignedToUser.firstName} ${assignment.assignedToUser.lastName}`,
-            email: assignment.assignedToUser.email,
-          },
-          dueDate: assignment.schedule?.scheduledDate || task.dueDate,
-        })),
+        assignedTo: task.TaskAssignmentGroup?.assignedToIds.map((assignee) => {
+          return {
+            id: assignee.id,
+            firstName: assignee.firstName,
+            lastName: assignee.lastName,
+            email: assignee.email,
+          }
+        }) || [],
         createdBy: task.createdByUser
           ? `${task.createdByUser.firstName} ${task.createdByUser.lastName}`
           : 'Unknown'
       };
     });
   }
-
 
   static async updateTask(id: string, data: Prisma.TaskUpdateInput) {
     // 1. Get the existing task

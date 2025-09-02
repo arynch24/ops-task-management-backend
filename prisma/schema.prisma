@@ -65,11 +65,12 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  createdCategories    Category[]       @relation("CategoryCreator")
-  createdSubcategories Subcategory[]    @relation("SubcategoryCreator")
-  createdTasks         Task[]           @relation("TaskCreator")
-  assignedTasks        TaskAssignment[] @relation("TaskAssignee")
-  assignedByTasks      TaskAssignment[] @relation("TaskAssigner")
+  createdCategories    Category[]            @relation("CategoryCreator")
+  createdSubcategories Subcategory[]         @relation("SubcategoryCreator")
+  createdTasks         Task[]                @relation("TaskCreator")
+  assignedTasks        TaskAssignment[]      @relation("TaskAssignee")
+  assignedByTasks      TaskAssignment[]      @relation("TaskAssigner")
+  assignmentGroups     TaskAssignmentGroup[] @relation("AssignedUsers")
   notifications        Notification[]
 
   @@map("users")
@@ -147,8 +148,6 @@ model Task {
    * }
    */
 
-  // ✅ Add these two fields
-  nextDueDate   DateTime? // Next upcoming scheduled date
   lastGenerated DateTime? // When schedules were last generated (e.g., 6 months out)
   dueDate       DateTime? // Optional: for ADHOC tasks
 
@@ -164,29 +163,26 @@ model Task {
   @@map("tasks")
 }
 
-/// One row per scheduled instance of a recurring task
 model RecurringTaskSchedule {
-  id            String          @id @default(uuid())
-  taskId        String          @db.VarChar(255)
-  task          Task            @relation(fields: [taskId], references: [id])
-  scheduledDate DateTime // Date/time in UTC
-  status        ScheduleStatus  @default(PENDING)
-  assignmentId  String?         @unique // Points to one assignment if assigned
-  assignment    TaskAssignment?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id            String           @id @default(uuid())
+  taskId        String           @db.VarChar(255)
+  task          Task             @relation(fields: [taskId], references: [id])
+  scheduledDate DateTime
+  status        ScheduleStatus   @default(PENDING)
+  assignments   TaskAssignment[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([taskId, scheduledDate])
   @@index([scheduledDate, status])
   @@map("recurring_task_schedules")
 }
 
-/// One assignment per user per scheduled task (or ad-hoc)
 model TaskAssignment {
   id             String                 @id @default(uuid())
   taskId         String                 @db.VarChar(255)
   task           Task                   @relation(fields: [taskId], references: [id])
-  scheduleId     String?                @unique // Optional: only for recurring tasks
+  scheduleId     String?
   schedule       RecurringTaskSchedule? @relation(fields: [scheduleId], references: [id])
   assignedTo     String                 @db.VarChar(255)
   assignedToUser User                   @relation("TaskAssignee", fields: [assignedTo], references: [id])
@@ -201,19 +197,18 @@ model TaskAssignment {
 
   notifications Notification[]
 
+  // 🔐 Prevent duplicate assignments
+  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
   @@index([assignedTo, status])
   @@index([taskId, scheduleId])
   @@map("task_assignments")
-
-   // 🔐 Prevent duplicate assignments
-  @@unique([taskId, assignedTo, scheduleId]) // scheduleId can be null for ADHOC tasks
 }
 
 model TaskAssignmentGroup {
   id            String   @id @default(uuid())
   taskId        String   @unique
   task          Task     @relation(fields: [taskId], references: [id])
-  assignedToIds String[] // Array of user IDs
+  assignedToIds User[]   @relation("AssignedUsers")
   assignedBy    String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

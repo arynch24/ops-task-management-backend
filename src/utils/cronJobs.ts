@@ -6,7 +6,7 @@ import { AssignmentService } from '../services/assignment.service';
 
 const assignmentService = new AssignmentService();
 
-// Every day at 2:00 AM UTC
+// Every day at 2:00 AM IST
 schedule('0 2 * * *', async () => {
     const now = new Date();
 
@@ -43,4 +43,6 @@ schedule('0 2 * * *', async () => {
             },
         });
     }
+}, {
+    timezone: "Asia/Kolkata",   // ensures it runs at 2 AM IST
 });

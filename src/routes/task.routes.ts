@@ -100,7 +100,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), deleteTask);
  * @returns {Task[]} - The list of all tasks
  * @throws {UnauthorizedError} - If user is not authenticated
 */
-router.get('/', authenticate, getAllTasks);
+router.get('/', authenticate, authorize('ADMIN'), getAllTasks);
 
 /** Get a specific task detail
  * @returns {Task} - The requested task
@@ -110,6 +110,11 @@ router.get('/', authenticate, getAllTasks);
 router.get('/:id', authenticate, getTask);
 
 /** Reassign a task to a new user for (future schedules only)
+ * PATCH /api/tasks/:id/assign  // here id is task id
+ * @description Reassign a recurring task to a new user for future schedules only
+ * @body :{
+ *   "userIds": ["string"],
+ * }
  * @returns {Task} - The updated task
  * @throws {UnauthorizedError} - If user is not authenticated
  * @throws {ForbiddenError} - If user is not an admin
