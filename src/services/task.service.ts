@@ -4,23 +4,20 @@ import { ScheduleService } from './schedule.service';
 import { prisma } from '../config/db';
 
 export class TaskService {
-
   static async createTask(data: any, createdBy: string) {
-    return await prisma.$transaction(async (tx) => {
-      const task = await tx.task.create({
-        data: {
-          ...data,
-          createdBy,
-        },
-      });
-
-      // If recurring, generate schedules
-      if (task.taskType === 'RECURRING' && task.repetitionConfig) {
-        await ScheduleService.generateSchedulesForTask(task);
-      }
-
-      return task;
+    const task = await prisma.task.create({
+      data: {
+        ...data,
+        createdBy,
+      },
     });
+
+    // If recurring, generate schedules
+    if (task.taskType === 'RECURRING' && task.repetitionConfig) {
+      await ScheduleService.generateSchedulesForTask(task);
+    }
+
+    return task;
   }
 
   static async getTaskWithAssignments(id: string) {
