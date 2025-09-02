@@ -31,6 +31,7 @@ export class AuthController {
       return successResponse(res, 'Google Auth successful', { user });
     } catch (error: any) {
       console.error('Google Auth Error:', error);
+      res.redirect(`${config.clientUrl}/unauthorized`);
       return errorResponse(res, 401, error.message || 'Authentication failed.');
     }
   }
