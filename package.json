@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/PW-IOI-Tech/ops-task-management-backend#readme",
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",
@@ -35,6 +36,7 @@
   "dependencies": {
     "@aws-sdk/client-ses": "^3.876.0",
     "@prisma/client": "^6.15.0",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
