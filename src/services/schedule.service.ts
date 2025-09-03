@@ -154,8 +154,18 @@ export class ScheduleService {
             orderBy: { scheduledDate: 'desc' },
         });
 
-        const startDate = lastSchedule ? addDays(lastSchedule.scheduledDate, 1) : new Date(task.createdAt);
-        const endDate = addMonths(startDate, 1); // Only generate 1 month at a time
+        // const startDate = lastSchedule ? addDays(lastSchedule.scheduledDate, 1) : new Date(task.createdAt);
+        // const endDate = addMonths(startDate, 1); // Only generate 1 month at a time
+
+        let startDate: Date;
+
+        if (lastSchedule) {
+            // The generator will handle the interval
+            startDate = new Date(lastSchedule.scheduledDate);
+        } else {
+            // No schedules yet — start from now or task creation
+            startDate = new Date(task.createdAt);
+        }
 
         const generators = {
             interval: ScheduleService.generateIntervalDates,
@@ -180,9 +190,29 @@ export class ScheduleService {
         }
 
         //  Sort to find next due date
-        const sortedDates = [...dateList].sort((a, b) => a.getTime() - b.getTime());
+        // const sortedDates = [...dateList].sort((a, b) => a.getTime() - b.getTime());
 
-        const schedules = sortedDates.map(date => ({
+        // ✅ Filter out duplicates (already existing in DB)
+        const existingScheduleDates = await prisma.recurringTaskSchedule.findMany({
+            where: {
+                taskId: task.id,
+                scheduledDate: { in: dateList }
+            },
+            select: { scheduledDate: true }
+        });
+
+        const existingDates = new Set(
+            existingScheduleDates.map(s => s.scheduledDate.toISOString())
+        );
+
+        const newDates = dateList.filter(date => !existingDates.has(date.toISOString()));
+
+        if (newDates.length === 0) {
+            console.log(`No new schedule dates to create for task ${task.id}`);
+            return;
+        }
+
+        const schedules = newDates.map(date => ({
             taskId: task.id,
             scheduledDate: date,
             status: 'PENDING' as ScheduleStatus,
@@ -190,24 +220,16 @@ export class ScheduleService {
             updatedAt: new Date(),
         }));
 
-        try {
-            await prisma.recurringTaskSchedule.createMany({
-                data: schedules,
-            });
-        } catch (error) {
-            throw new Error(`Failed to create schedules for task ${task.id}: ${error}`);
-        }
+        await prisma.recurringTaskSchedule.createMany({
+            data: schedules,
+        });
 
-        try {
-            await prisma.task.update({
-                where: { id: task.id },
-                data: {
-                    lastGenerated: new Date(),
-                },
-            });
-        } catch (error) {
-            throw new Error(`Failed to update lastGenerated for task ${task.id}: ${error}`);
-        }
+        await prisma.task.update({
+            where: { id: task.id },
+            data: {
+                lastGenerated: new Date(),
+            },
+        });
     }
 
 }

@@ -231,38 +231,19 @@ export class AssignmentService {
         data: assignmentsData,
       });
 
-      // 5. Now fetch the created assignments to get their IDs
-      // We need IDs to update recurringTaskSchedules.assignmentId
-      const createdAssignments = await tx.taskAssignment.findMany({
+      //5.Update recurringTaskSchedules with status assigned
+      await tx.recurringTaskSchedule.updateMany({
         where: {
           taskId,
-          scheduleId: { in: scheduleIds },
+          status: 'PENDING',
         },
-        select: { id: true, scheduleId: true },
+        data: {
+          status: 'ASSIGNED',
+        },
       });
 
-      // 6. Map: scheduleId → assignmentId
-      const scheduleToAssignmentMap = new Map(
-        createdAssignments.map(a => [a.scheduleId, a.id])
-      );
-
-      // 7. Prepare update data for recurringTaskSchedules
-      const scheduleUpdates = Array.from(scheduleToAssignmentMap.entries())
-        .filter(([scheduleId]) => scheduleId !== null)
-        .map(([scheduleId, assignmentId]) => ({
-          where: { id: scheduleId! },
-          data: { assignmentId, status: 'ASSIGNED' as const }
-        }));
-
-      // 8. Update all schedules
-      await Promise.all(
-        scheduleUpdates.map(update =>
-          tx.recurringTaskSchedule.update(update)
-        )
-      );
-
       // 9. Return count or created assignments
-      return { success: true, count: createdAssignments.length };
+      return { success: true, count: assignmentsData.length };
     });
   }
 

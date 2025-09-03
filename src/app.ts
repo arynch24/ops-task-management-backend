@@ -13,6 +13,7 @@ import categoryRoutes from './routes/category.routes';
 import userRoutes from './routes/user.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import subcategoryRoutes from './routes/subCategory.routes';
+import './utils/cronJobs';
 // import { startCronJobs } from './utils/awsCronJobs';
 
 const app: Application = express();
