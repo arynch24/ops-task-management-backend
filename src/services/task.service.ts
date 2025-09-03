@@ -21,6 +21,9 @@ export class TaskService {
   }
 
   static async getTaskWithAssignments(id: string) {
+    const now = new Date();
+    const endOfDayUTC = new Date(now.setUTCHours(23, 59, 59, 999));
+
     return prisma.task.findUnique({
       where: { id },
       select: {
@@ -33,11 +36,21 @@ export class TaskService {
         dueDate: true,
         category: true,
         subcategory: true,
+        lastGenerated: true,
         createdByUser: { select: { firstName: true, lastName: true } },
         taskAssignments: {
+          where: {
+            schedule: {
+              scheduledDate: {
+                lte: endOfDayUTC,
+              }
+            }
+          },
           include: {
             assignedToUser: { select: { firstName: true, lastName: true, email: true } },
-            schedule: true,
+            schedule: {
+              select: { scheduledDate: true }
+            },
           },
         },
       },
