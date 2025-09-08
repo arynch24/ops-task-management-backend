@@ -14,7 +14,7 @@ import userRoutes from './routes/user.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import subcategoryRoutes from './routes/subCategory.routes';
 import './utils/cronJobs';
-// import { startCronJobs } from './utils/awsCronJobs';
+import reportRoutes from './routes/report.route';
 
 const app: Application = express();
 
@@ -35,6 +35,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/reports', reportRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to OPS TASK MANAGER API!' });
