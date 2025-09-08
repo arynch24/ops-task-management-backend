@@ -12,4 +12,6 @@ export const config = {
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
     nodeEnv: process.env.NODE_ENV,
+    emailFrom: process.env.EMAIL_FROM,
+    reportApiKey: process.env.REPORT_API_KEY
 };
