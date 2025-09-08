@@ -1,10 +1,9 @@
-import { PrismaClient, Task, Prisma } from '@prisma/client';
+import { PrismaClient, Task, Prisma, ParameterType } from '@prisma/client';
 import { repetitionConfigSchema } from '../validators/task.validator';
 import { ScheduleService } from './schedule.service';
 import { prisma } from '../config/db';
 
 export class TaskService {
-
   static async createTask(data: any, createdBy: string) {
     const task = await prisma.task.create({
       data: {
@@ -22,6 +21,9 @@ export class TaskService {
   }
 
   static async getTaskWithAssignments(id: string) {
+    const now = new Date();
+    const endOfDayUTC = new Date(now.setUTCHours(23, 59, 59, 999));
+
     return prisma.task.findUnique({
       where: { id },
       select: {
@@ -34,11 +36,21 @@ export class TaskService {
         dueDate: true,
         category: true,
         subcategory: true,
+        lastGenerated: true,
         createdByUser: { select: { firstName: true, lastName: true } },
         taskAssignments: {
+          where: {
+            schedule: {
+              scheduledDate: {
+                lte: endOfDayUTC,
+              }
+            }
+          },
           include: {
             assignedToUser: { select: { firstName: true, lastName: true, email: true } },
-            schedule: true,
+            schedule: {
+              select: { scheduledDate: true }
+            },
           },
         },
       },
@@ -76,9 +88,11 @@ export class TaskService {
         title: true,
         description: true,
         taskType: true,
+        parameterType: true,
         parameterLabel: true,
         parameterUnit: true,
         dueDate: true, // for ADHOC
+        repetitionConfig: true, // Rule-based config for recurring tasks
         category: {
           select: { name: true }
         },
@@ -146,9 +160,11 @@ export class TaskService {
         taskType: task.taskType,
         category: task.category?.name,
         subcategory: task.subcategory?.name,
+        parameterType: task.parameterType,
         parameterLabel: task.parameterLabel,
         parameterUnit: task.parameterUnit,
         dueDate,
+        repetitionConfig: task.repetitionConfig,
         assignedTo: task.TaskAssignmentGroup?.assignedToIds.map((assignee) => {
           return {
             id: assignee.id,
