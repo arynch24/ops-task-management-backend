@@ -92,6 +92,7 @@ export class TaskService {
         parameterLabel: true,
         parameterUnit: true,
         dueDate: true, // for ADHOC
+        dropdownOptions: true,
         repetitionConfig: true, // Rule-based config for recurring tasks
         category: {
           select: { name: true }
@@ -164,6 +165,7 @@ export class TaskService {
         parameterLabel: task.parameterLabel,
         parameterUnit: task.parameterUnit,
         dueDate,
+        dropdownOptions: task.dropdownOptions,
         repetitionConfig: task.repetitionConfig,
         assignedTo: task.TaskAssignmentGroup?.assignedToIds.map((assignee) => {
           return {
