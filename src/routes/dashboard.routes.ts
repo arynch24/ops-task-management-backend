@@ -6,9 +6,9 @@ import { authorize } from '../middlewares/authorize.middleware';
 const router = Router();
 
 /**
- * GET /api/dashboard/summary
- * Get admin dashboard summary
- * return {
+ * GET /api/dashboard/summary?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ * Get admin dashboard summary for the given date range (defaults to today if not provided)
+ * returns {
     "success": true,
     "message": "Dashboard summary fetched successfully",
     "data": {
@@ -22,7 +22,8 @@ const router = Router();
 router.get('/summary', authenticate, authorize('ADMIN'), getAdminSummary);
 
 /**
- * GET /api/dashboard/category-summary
+ * GET /api/dashboard/category-summary?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ * Get category-wise task summary for the given date range (defaults to today if not provided)
  * returns {
     "success": true,
     "message": "Category summary fetched successfully",
