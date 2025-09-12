@@ -38,8 +38,6 @@ export class DashboardService {
       }
     });
 
-    console.log(`Fetched ${assignments.length}`);
-
     // 2. Group by category first, then by assignee
     const categoryMap = new Map<string, any>();
 
@@ -109,6 +107,20 @@ export class DashboardService {
       return category;
     });
 
-    return result;
+    return {
+      totalAssignedTasks: assignments.length,
+      pending: assignments.filter(a => a.status === 'PENDING').length,
+      completed: assignments.filter(a => a.status === 'COMPLETED').length,
+      adhoc: await prisma.task.count({
+        where: {
+          taskType: 'ADHOC',
+          dueDate: {
+            gte: start,
+            lte: end
+          }
+        }
+      }),
+      categorySummary: result
+    };
   }
 }
