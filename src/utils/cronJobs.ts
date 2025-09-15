@@ -12,15 +12,15 @@ schedule('0 2 * * *', async () => {
     const now = new Date();
 
     // Find recurring tasks where:
-    // - lastGenerated was more than ~30 days ago
+    // - lastGenerated was more than ~21 days ago
     // - OR it's the first time generating (lastGenerated is old but not null)
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const threeWeeksAgo = new Date();
+    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
     const tasks = await prisma.task.findMany({
         where: {
             taskType: 'RECURRING',
-            lastGenerated: { lte: oneMonthAgo },
+            lastGenerated: { lte: threeWeeksAgo },
         },
     });
 
