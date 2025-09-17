@@ -1,21 +1,26 @@
 import { prisma } from '../config/db';
 
 export class DashboardService {
-  static async getTodayTaskSummary() {
-    const today = new Date();
-    
-    // ✅ Use UTC to avoid timezone issues
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+  static async getTodayTaskSummary(startDate?: string, endDate?: string) {
 
-    // 1. Get all task assignments for today (UTC-safe)
+    // Use today's date as default if no dates provided
+    const today = new Date();
+    const start = startDate ? new Date(startDate) : new Date(today);
+    const end = endDate ? new Date(endDate) : new Date(today);
+
+    // Set to start and end of day in local timezone
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    // 1. Get all task assignments for the date range
     const assignments = await prisma.taskAssignment.findMany({
       where: {
-        OR: [
-          { createdAt: { gte: startOfDay, lt: endOfDay } },
-          { completedAt: { gte: startOfDay, lt: endOfDay } }
-        ]
+        schedule: {
+          scheduledDate: {
+            gte: start,
+            lte: end
+          }
+        }
       },
       include: {
         task: {
@@ -102,6 +107,20 @@ export class DashboardService {
       return category;
     });
 
-    return result;
+    return {
+      totalAssignedTasks: assignments.length,
+      pending: assignments.filter(a => a.status === 'PENDING').length,
+      completed: assignments.filter(a => a.status === 'COMPLETED').length,
+      adhoc: await prisma.task.count({
+        where: {
+          taskType: 'ADHOC',
+          dueDate: {
+            gte: start,
+            lte: end
+          }
+        }
+      }),
+      categorySummary: result
+    };
   }
 }

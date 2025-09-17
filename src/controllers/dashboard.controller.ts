@@ -3,68 +3,13 @@ import { prisma } from '../config/db';
 import { errorResponse, successResponse } from '../utils/response';
 import { DashboardService } from '../services/dashboard.service';
 
-export const getAdminSummary = async (req: Request, res: Response) => {
-  try {
-
-    const startDate = new Date();
-
-    // Normalize to UTC start/end of day
-    const startOfDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-    const endOfDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 23, 59, 59, 999));
-
-    const pendingAssignments = await prisma.taskAssignment.count({
-      where: {
-        status: 'PENDING',
-        schedule: {
-          scheduledDate: {
-            gte: startOfDay,
-            lte: endOfDay
-          }
-        }
-      },
-    });
-
-    const completedAssignments = await prisma.taskAssignment.count({
-      where: {
-        status: 'COMPLETED',
-        schedule: {
-          scheduledDate: {
-            gte: startOfDay,
-            lte: endOfDay
-          }
-        }
-      },
-    });
-
-    const totalAdhocTasks = await prisma.task.count({
-      where: {
-        taskType: 'ADHOC',
-        dueDate: {
-          gte: startOfDay,
-          lte: endOfDay
-        }
-      }
-    });
-
-    const totalAssignedTasks = pendingAssignments + completedAssignments;
-
-    return successResponse(res, 'Dashboard summary fetched successfully', {
-      totalAssignedTasks: totalAssignedTasks,
-      pending: pendingAssignments,
-      completed: completedAssignments,
-      adhoc: totalAdhocTasks
-    });
-  } catch (error: any) {
-    return errorResponse(res, 500, 'Failed to fetch dashboard data');
-  }
-};
-
-
 export const getCategorySummary = async (req: Request, res: Response) => {
   try {
-    const getTodayTaskSummary = await DashboardService.getTodayTaskSummary();
+    const { startDate, endDate } = req.query;
 
-    successResponse(res, 'Category summary fetched successfully', getTodayTaskSummary);
+    const getCategorySummary = await DashboardService.getTodayTaskSummary(startDate as string, endDate as string);
+
+    return successResponse(res, 'Category summary fetched successfully', getCategorySummary);
 
   } catch (error: any) {
     return errorResponse(res, 500, 'Failed to fetch category summary');
